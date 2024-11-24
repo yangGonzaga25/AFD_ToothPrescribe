@@ -60,7 +60,6 @@
     .sidebar-header img {
         width: 60px;
         height: 60px;
-        border-radius: 50%;
     }
 
     .sidebar-header span {
@@ -72,7 +71,7 @@
 
     .sidebar-menu {
         list-style: none;
-        padding: 0;
+        padding-top: 3rem;
         margin: 0;
         flex-grow: 1;
     }
@@ -80,7 +79,8 @@
     .sidebar-menu li {
         display: flex;
         align-items: center;
-        padding: 15px 20px;
+        padding-top: 1.2rem;
+        padding-left: 20px;
         cursor: pointer;
     }
 
@@ -92,6 +92,7 @@
         width: 30px;
         height: 30px;
         margin-right: 15px;
+        margin-top: 0;
     }
 
     .sidebar-menu li .text {
@@ -177,20 +178,28 @@
     </div>
     <ul class="sidebar-menu">
         <li>
-            <img class="icon" src="/images/icon-dashboard.png" alt="Dashboard Icon" />
-            <span class="text">Dashboard</span>
+            <a href="/dashboard">
+                <img class="icon" src="/images/icon-dashboard.png" alt="Dashboard Icon" />
+                <span class="text">Dashboard</span>
+            </a>
         </li>
         <li>
-            <img class="icon" src="/images/icon-patient.png" alt="Patient Icon" />
-            <span class="text">Patient List</span>
+            <a href="/patient-list">
+                <img class="icon" src="/images/icon-patient.png" alt="Patient Icon" />
+                <span class="text">Patient List</span>
+            </a>
         </li>
         <li>
-            <img class="icon" src="/images/icon-prescriptions.png" alt="Prescriptions Icon" />
-            <span class="text">Prescriptions</span>
+            <a href="/prescription">
+                <img class="icon" src="/images/icon-prescriptions.png" alt="Prescriptions Icon" />
+                <span class="text">Prescriptions</span>
+            </a>
         </li>
         <li>
-            <img class="icon" src="/images/icon-medicines.png" alt="Medicines Icon" />
-            <span class="text">Medicines List</span>
+            <a href="/medicine-list">
+                <img class="icon" src="/images/icon-medicines.png" alt="Medicines Icon" />
+                <span class="text">Medicines List</span>
+            </a>
         </li>
     </ul>
     <button class="logout-btn" on:click={logout}>
