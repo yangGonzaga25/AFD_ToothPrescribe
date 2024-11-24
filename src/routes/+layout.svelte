@@ -1,5 +1,6 @@
+
 <script>
-    // Optional: Add any global state management or other scripts needed for layout
+    import '../app.css';
 </script>
 
 <style>
