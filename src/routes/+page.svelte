@@ -4,16 +4,7 @@
 
 <style>
     /* Make sure the body and html fill the entire viewport and prevent scrolling */
-    html, body {
-        height: 100%;
-        width: 100%;
-        margin: 0;
-        padding: 0;
-        font-family: 'Helvetica Neue', Arial, sans-serif;
-        background-color: white; /* White background */
-        color: #000; /* Black text for body */
-        overflow: hidden; /* Prevent scrolling */
-    }
+    
 
     header {
         display: flex;

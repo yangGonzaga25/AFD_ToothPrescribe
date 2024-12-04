@@ -1,24 +1,79 @@
-<script>
-    // @ts-ignore
+<script lang="ts">
+    // Import necessary Firebase functions
     import Sidebar from '../sidenav/+page.svelte'; // Import the sidebar component
+    import { getFirestore, doc, getDoc } from "firebase/firestore";
+    
+    import { firebaseConfig } from "$lib/firebaseConfig";
+    import { initializeApp, getApps, getApp } from "firebase/app";
+
+    // Initialize Firebase app and Firestore
+    const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+    const db = getFirestore(app);
 
     let isCollapsed = false;
+
+    // Define a type for the stats
+    type Stats = {
+        newAppointments: number;
+        totalPatients: number;
+        todaysPatients: number;
+        todaysAppointments: number;
+        todaysPrescriptions: number;
+        totalPrescriptions: number;
+    };
+
+    // Initialize stats with default values
+    let stats: Stats = {
+        newAppointments: 0,
+        totalPatients: 0,
+        todaysPatients: 0,
+        todaysAppointments: 0,
+        todaysPrescriptions: 0,
+        totalPrescriptions: 0,
+    };
 
     function toggleSidebar() {
         isCollapsed = !isCollapsed;
     }
 
     function logout() {
-        // Redirect to the main landing page
-        window.location.href = "/"; // Or replace with the correct landing page URL
+        window.location.href = "/"; // Redirect to landing page
     }
+
+    // Function to fetch the dashboard data from Firestore
+    async function fetchDashboardData() {
+        try {
+            const docRef = doc(db, "clinicStats", "dashboard");
+            const docSnap = await getDoc(docRef);
+
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                // Ensure the data has the correct structure
+                stats = {
+                    newAppointments: data.newAppointments || 0,
+                    totalPatients: data.totalPatients || 0,
+                    todaysPatients: data.todaysPatients || 0,
+                    todaysAppointments: data.todaysAppointments || 0,
+                    todaysPrescriptions: data.todaysPrescriptions || 0,
+                    totalPrescriptions: data.totalPrescriptions || 0,
+                };
+            } else {
+                console.error("No such document!");
+            }
+        } catch (error) {
+            console.error("Error fetching dashboard data:", error);
+        }
+    }
+
+    // Fetch data on component mount
+    fetchDashboardData();
 </script>
 
+<!-- svelte-ignore css_unused_selector -->
 <style>
-    body, html {
+    body {
         margin: 0;
         padding: 0;
-        font-family: Arial, sans-serif;
         height: 100%;
     }
 
@@ -81,7 +136,7 @@
 
 <div class="dashboard">
     <!-- Sidebar -->
-    <Sidebar {isCollapsed} {toggleSidebar} {logout} /> <!-- Use the Sidebar component -->
+    <Sidebar {isCollapsed} {toggleSidebar} {logout} />
 
     <!-- Main Content -->
     <div class="content">
@@ -93,42 +148,42 @@
             <div class="card">
                 <span class="icon">📆</span>
                 <div class="text">
-                    <h3>2</h3>
+                    <h3>{stats.newAppointments}</h3>
                     <p>New Appointments</p>
                 </div>
             </div>
             <div class="card">
                 <span class="icon">👥</span>
                 <div class="text">
-                    <h3>4</h3>
+                    <h3>{stats.totalPatients}</h3>
                     <p>Total Patients</p>
                 </div>
             </div>
             <div class="card">
                 <span class="icon">👤</span>
                 <div class="text">
-                    <h3>6</h3>
+                    <h3>{stats.todaysPatients}</h3>
                     <p>Today's Patients</p>
                 </div>
             </div>
             <div class="card">
                 <span class="icon">📅</span>
                 <div class="text">
-                    <h3>1</h3>
+                    <h3>{stats.todaysAppointments}</h3>
                     <p>Today's Appointments</p>
                 </div>
             </div>
             <div class="card">
                 <span class="icon">📜</span>
                 <div class="text">
-                    <h3>0</h3>
+                    <h3>{stats.todaysPrescriptions}</h3>
                     <p>Today's Prescriptions</p>
                 </div>
             </div>
             <div class="card">
                 <span class="icon">📜</span>
                 <div class="text">
-                    <h3>4</h3>
+                    <h3>{stats.totalPrescriptions}</h3>
                     <p>Total Prescriptions</p>
                 </div>
             </div>

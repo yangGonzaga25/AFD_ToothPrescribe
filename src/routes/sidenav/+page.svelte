@@ -43,16 +43,19 @@
         justify-content: center;
         align-items: center;
         background-color: white;
-        width: 80px;
-        height: 80px;
+        width: 80px; /* Default width */
+        height: 80px; /* Default height */
         border-radius: 50%;
         padding: 10px;
+        transition: width 0.3s ease, height 0.3s ease; /* Smooth transition */
     }
 
-    .sidebar-header img {
-        width: 60px;
-        height: 60px;
+    .sidebar.collapsed .circle-background {
+        width: 50px; /* Smaller width when collapsed */
+        height: 50px; /* Smaller height when collapsed */
     }
+
+    
 
     .sidebar-header span {
         margin-top: 10px;

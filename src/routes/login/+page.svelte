@@ -2,27 +2,46 @@
   // @ts-nocheck
   import { Modal } from 'flowbite-svelte';
   import { Label, Input } from 'flowbite-svelte';
-  
+  import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
+  import { firebaseConfig } from "$lib/firebaseConfig";
+  import { initializeApp, getApps, getApp } from "firebase/app";
+  import { goto } from '$app/navigation';
+
+  // Initialize Firebase app
+  const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+  const auth = getAuth(app);
+
   let showModal = false;
-  
-  function handleLogin() {
-      // Assume login success
-      showModal = true;
+  let email = '';
+  let password = '';
+  let loginMessage = ''; // Message for success or error
+
+  async function handleLogin() {
+      try {
+          const userCredential = await signInWithEmailAndPassword(auth, email, password);
+          // Login successful
+          showModal = true;
+          loginMessage = "Login successful! Welcome, " + userCredential.user.email;
+          // Redirect to the desired page
+          setTimeout(() => goto('/dashboard'), 1500); // Adjust the redirect path
+      } catch (error) {
+          // Handle login error
+          showModal = true;
+          loginMessage = "Login failed: " + error.message;
+      }
   }
 </script>
 
-<!-- Apply global styles for body and html using :global -->
 <style>
-:global(body, html) {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-}
+  :global(body, html) {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+  }
 </style>
 
-<!-- Wrapping the entire view with a background -->
+<!-- Login Form -->
 <div class="min-h-screen bg-gradient-to-r from-[#094361] to-[#128AC7] flex items-center justify-center">
-  <!-- Login form container -->
   <div class="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
       <div class="flex items-center mb-4">
           <img src="/images/lock.png" alt="Lock Icon" class="w-12 h-12 mr-4" />
@@ -49,6 +68,7 @@
               id="email" 
               placeholder="Enter your email" 
               class="border p-2 w-full" 
+              bind:value={email} 
               required 
           />
       </div>
@@ -61,6 +81,7 @@
               id="password" 
               placeholder="Enter your password" 
               class="border p-2 w-full" 
+              bind:value={password} 
               required 
           />
       </div>
@@ -90,7 +111,7 @@
 
 <!-- Modal for success/error -->
 <Modal visible={showModal} on:close={() => showModal = false}>
-  <p>Your login was successful!</p>
+  <p>{loginMessage}</p>
   <button 
       on:click={() => showModal = false} 
       class="bg-blue-500 text-white p-2 rounded"

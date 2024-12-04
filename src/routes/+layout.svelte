@@ -5,9 +5,7 @@
 
 <style>
 
-    main {
-        padding: 20px;
-    }
+   
     :global(body) {
         margin: 0;
         padding: 0;
@@ -15,7 +13,8 @@
         overflow: hidden; /* Prevent scrolling */
    
     }
- 
+    
+	
 </style>
 
 
