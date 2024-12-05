@@ -17,7 +17,10 @@
         background-color: rgba(17, 28, 95, 0); /* Ensure header background is consistent */
         z-index: 1000; /* Keep header on top */
     }
-
+    nav {
+    display: flex;
+    gap: 25px; /* Add space between the links */
+}
     nav a {
         text-decoration: none;
         color: #000; /* Black text for the login */
@@ -71,6 +74,7 @@
 
 <header>
     <nav>
+        <a href="/login-patient">Patient Login</a>
         <a href="/login">Dentist Login</a>
     </nav>
 </header>
