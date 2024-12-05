@@ -4,10 +4,12 @@
     import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
     import { firebaseConfig } from "$lib/firebaseConfig";
     import { initializeApp, getApps, getApp } from "firebase/app";
+    import { getFirestore, doc, setDoc } from "firebase/firestore"; // Firestore imports
     import { goto } from '$app/navigation';
 
     const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
     const auth = getAuth(app);
+    const db = getFirestore(app); // Initialize Firestore
 
     let email = '';
     let password = '';
@@ -21,8 +23,17 @@
         }
         try {
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-            registrationMessage = "Registration successful! Welcome, " + userCredential.user.email;
-            setTimeout(() => goto('/patient-login'), 1500); // Adjust the redirect path
+            const user = userCredential.user;
+
+            // Save user data with a 'role' as 'userPatient' to Firestore
+            await setDoc(doc(db, "users", user.uid), {
+                email: user.email,
+                role: 'userPatient', // Define the role for patients
+                createdAt: new Date().toISOString()
+            });
+
+            registrationMessage = "Registration successful! Welcome, " + user.email;
+            setTimeout(() => goto('/login-patient'), 1500); // Adjust the redirect path
         } catch (error) {
             registrationMessage = "Registration failed: " + error.message;
         }
