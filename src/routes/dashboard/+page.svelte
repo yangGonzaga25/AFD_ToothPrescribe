@@ -2,7 +2,6 @@
     // Import necessary Firebase functions
     import Sidebar from '../sidenav/+page.svelte'; // Import the sidebar component
     import { getFirestore, doc, getDoc } from "firebase/firestore";
-    
     import { firebaseConfig } from "$lib/firebaseConfig";
     import { initializeApp, getApps, getApp } from "firebase/app";
 
@@ -132,6 +131,7 @@
         margin: 0;
         color: #555;
     }
+    
 </style>
 
 <div class="dashboard">
