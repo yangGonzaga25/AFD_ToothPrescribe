@@ -1,12 +1,11 @@
 <script lang="ts">
-    // Import necessary Firebase functions
     import Sidebar from '../sidenav/+page.svelte'; // Import the sidebar component
-    import { getFirestore, doc, getDoc } from "firebase/firestore";
-    import { firebaseConfig } from "$lib/firebaseConfig";
+    import { getFirestore, collection, getDocs, query, where } from "firebase/firestore";
     import { initializeApp, getApps, getApp } from "firebase/app";
 
-    // Initialize Firebase app and Firestore
-    const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+    // Firebase initialization
+    import { firebaseConfig } from "$lib/firebaseConfig";
+    const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
     let isCollapsed = false;
@@ -39,28 +38,37 @@
         window.location.href = "/"; // Redirect to landing page
     }
 
-    // Function to fetch the dashboard data from Firestore
+    // Helper function to get today's date in 'YYYY-MM-DD' format
+    function getTodayDate() {
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    // Fetch data from Firestore
     async function fetchDashboardData() {
         try {
-            const docRef = doc(db, "clinicStats", "dashboard");
-            const docSnap = await getDoc(docRef);
+            // Fetch all appointments
+            const appointmentsCollection = collection(db, "appointments");
+            const appointmentDocs = await getDocs(appointmentsCollection);
 
-            if (docSnap.exists()) {
-                const data = docSnap.data();
-                // Ensure the data has the correct structure
-                stats = {
-                    newAppointments: data.newAppointments || 0,
-                    totalPatients: data.totalPatients || 0,
-                    todaysPatients: data.todaysPatients || 0,
-                    todaysAppointments: data.todaysAppointments || 0,
-                    todaysPrescriptions: data.todaysPrescriptions || 0,
-                    totalPrescriptions: data.totalPrescriptions || 0,
-                };
-            } else {
-                console.error("No such document!");
-            }
+            // Update stats with the count of all appointments
+            stats.newAppointments = appointmentDocs.size;
+
+            // Fetch today's appointments
+            const today = getTodayDate();
+            const todaysAppointmentsQuery = query(appointmentsCollection, where("date", "==", today));
+            const todaysAppointmentsDocs = await getDocs(todaysAppointmentsQuery);
+
+            // Update stats with today's appointments count
+            stats.todaysAppointments = todaysAppointmentsDocs.size;
+
+            console.log(`Total Appointments: ${stats.newAppointments}`);
+            console.log(`Today's Appointments: ${stats.todaysAppointments}`);
         } catch (error) {
-            console.error("Error fetching dashboard data:", error);
+            console.error("Error fetching data:", error);
         }
     }
 
@@ -131,9 +139,7 @@
         margin: 0;
         color: #555;
     }
-    
 </style>
-
 <div class="dashboard">
     <!-- Sidebar -->
     <Sidebar {isCollapsed} {toggleSidebar} {logout} />

@@ -1,53 +1,96 @@
-<script>
-    import Sidebar from '../sidenav/+page.svelte'; // Import the Sidebar component
+<script lang="ts">
+   import Sidebar from '../sidenav/+page.svelte'; // Import the Sidebar component
+import { onMount } from 'svelte';
+import { firebaseConfig } from "$lib/firebaseConfig"; // Import Firebase config
+import { initializeApp } from 'firebase/app';
+import { getFirestore, collection, getDocs, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { EditSolid, TrashBinSolid } from 'flowbite-svelte-icons'; // Import Flowbite icons
 
-    let isCollapsed = false;
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);  // Initialize Firestore
 
-    function toggleSidebar() {
-        isCollapsed = !isCollapsed;
+let isCollapsed = false;
+
+function toggleSidebar() {
+    isCollapsed = !isCollapsed;
+}
+
+function logout() {
+    window.location.href = "/"; // Redirect to main landing page
+}
+
+type Patient = {
+    id: string;
+    name: string;
+    address: string;
+    phone: string;
+    age: number;
+    // Add other relevant fields as necessary
+};
+
+let patients: Patient[] = []; // Explicitly define the type of patients
+let searchTerm = '';
+let isLoading = true;
+let error: string | null = null; // Explicitly define the type of error
+
+// Fetch user data from Firebase Firestore
+async function fetchPatients() {
+    try {
+        const querySnapshot = await getDocs(collection(db, "patientProfiles")); // 'patients' is the Firestore collection name
+        patients = querySnapshot.docs.map(doc => ({
+            id: doc.id,
+            name: doc.data().name,
+            address: doc.data().address,
+            phone: doc.data().phone,
+            age: doc.data().age
+        }));
+    } catch (err) {
+        error = (err as Error).message; // Type assertion to Error
+    } finally {
+        isLoading = false;
     }
+}
 
-    function logout() {
-        window.location.href = "/"; // Redirect to main landing page
+// Call fetchPatients on component mount
+onMount(() => {
+    fetchPatients();
+});
+
+// Function to filter patients based on search term
+function filterPatients() {
+    return patients.filter(patient => 
+        patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        patient.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        patient.phone.includes(searchTerm) ||
+        patient.age.toString().includes(searchTerm)
+    );
+}
+
+// Function to edit a patient's details
+async function editPatient(id: string) {
+    console.log(`Editing patient with ID: ${id}`);
+    // Redirect or show an edit form here, for example:
+    // window.location.href = `/editPatient/${id}`;
+    // Or, you could open a modal and update the patient details.
+}
+
+// Function to delete a patient
+async function deletePatient(id: string) {
+    try {
+        // Delete the patient from Firestore
+        await deleteDoc(doc(db, "patientProfiles", id));
+        console.log(`Patient with ID: ${id} deleted successfully`);
+        // Refresh the patient list after deletion
+        fetchPatients();
+    } catch (err) {
+        console.error("Error deleting patient:", err);
     }
+}
 
-    // Example data for patients
-    let patients = [
-        { id: 1, name: 'Juan Dela Cruz', address: 'L24 B9 Sta Rita, O.C.', phone: '09123456789', age: 18 },
-        { id: 2, name: 'Trisha Delos Santos', address: '27 Johnson St. E.B.B, O.C.', phone: '09876543210', age: 27 },
-        { id: 3, name: 'Christian Gonzaga', address: '14 St. Canda O.C.', phone: '09246801234', age: 54 },
-        { id: 4, name: 'Enrique Velasquez', address: '46 St. Salcedo Vill., O.C.', phone: '09369123456', age: 20 },
-        { id: 5, name: 'Gabriella Fernandez', address: '8 Murphy St. PAG-ASA, O.C.', phone: '09211234567', age: 33 }
-    ];
-    
-    let searchTerm = '';
-
-    function filterPatients() {
-        return patients.filter(patient => 
-            patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            patient.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            patient.phone.includes(searchTerm) ||
-            patient.age.toString().includes(searchTerm)
-        );
-    }
-
-    /**
-   * @param {number} id
-   */
-    function viewPatient(id) {
-        console.log(`Viewing patient with ID: ${id}`);
-        // Redirect to patient details or handle view logic here
-    }
 </script>
 
 <style>
-    body, html {
-        margin: 0;
-        padding: 0;
-        font-family: Arial, sans-serif;
-        height: 100%;
-    }
-
     .dashboard {
         display: flex;
         height: 100vh;
@@ -55,14 +98,13 @@
     }
 
     .content {
-    flex-grow: 1;
-    background-color: #f8f8f8;
-    padding: 20px;
-    overflow: auto;
-    margin-left: -10rem; /* Move to the left */
-    transition: margin-left 0.3s ease;
-}
-
+        flex-grow: 1;
+        background-color: #f8f8f8;
+        padding: 20px;
+        overflow: auto;
+        margin-left: -10rem; /* Move to the left */
+        transition: margin-left 0.3s ease;
+    }
 
     .content-header {
         display: flex;
@@ -108,19 +150,6 @@
         font-size: 1rem;
     }
 
-    .view-btn {
-        padding: 8px 12px;
-        background-color: #28a745;
-        color: white;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-    }
-
-    .view-btn:hover {
-        background-color: #218838;
-    }
-
     .pagination {
         display: flex;
         justify-content: flex-end;
@@ -145,55 +174,65 @@
     <Sidebar {isCollapsed} {toggleSidebar} {logout} />
 
     <!-- Main Content -->
-    <!-- Apply dynamic margin-left with inline style -->
     <div class="content" style="margin-left: {isCollapsed ? '-1rem' : '-2.4em'};">
-        <div class="content-header">
-            <h1>Patient List</h1>
-            
-    </div>
-    <div class="search-bar">
-        <input
-            type="text"
-            class="search-input"
-            placeholder="Search"
-            bind:value={searchTerm}
-        />
-</div>
-        <div class="table-container">
-            <table>
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Patient Name</th>
-                        <th>Patient Address</th>
-                        <th>Phone Number</th>
-                        <th>Patient Age</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {#each filterPatients() as patient (patient.id)}
-                    <tr>
-                        <td>{patient.id}</td>
-                        <td>{patient.name}</td>
-                        <td>{patient.address}</td>
-                        <td>{patient.phone}</td>
-                        <td>{patient.age}</td>
-                        <td>
-                            <button class="view-btn" on:click={() => viewPatient(patient.id)}>View</button>
-                        </td>
-                    </tr>
-                    {/each}
-                </tbody>
-            </table>
-            <div class="pagination">
-                <button disabled>&laquo;</button>
-                <button>1</button>
-                <button>2</button>
-                <button>3</button>
-                <button>&raquo;</button>
+        {#if isLoading}
+            <p>Loading patients...</p>
+        {:else if error}
+            <p style="color: red;">{error}</p>
+        {:else}
+            <div class="content-header">
+                <h1>Patient List</h1>
             </div>
-        </div>
+            <div class="search-bar">
+                <input
+                    type="text"
+                    class="search-input"
+                    placeholder="Search"
+                    bind:value={searchTerm}
+                />
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Patient Name</th>
+                            <th>Patient Address</th>
+                            <th>Phone Number</th>
+                            <th>Patient Age</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {#each filterPatients() as patient (patient.id)}
+                        <tr>
+                            <td>{patient.id}</td>
+                            <td>{patient.name}</td>
+                            <td>{patient.address}</td>
+                            <td>{patient.phone}</td>
+                            <td>{patient.age}</td>
+                            <td>
+                                <!-- Edit and Delete buttons with Flowbite icons -->
+                                <button class="action-btn" on:click={() => editPatient(patient.id)}>
+                                    <EditSolid class="text-blue-500" /> 
+                                </button>
+                                <button class="action-btn" on:click={() => deletePatient(patient.id)}>
+                                    <TrashBinSolid class="text-red-500" /> 
+                                </button>
+                                
+                            </td>
+                        </tr>
+                        {/each}
+                    </tbody>
+                </table>
+                <div class="pagination">
+                    <button disabled>&laquo;</button>
+                    <button>1</button>
+                    <button>2</button>
+                    <button>3</button>
+                    <button>&raquo;</button>
+                </div>
+            </div>
+        {/if}
     </div>
 </div>
-
