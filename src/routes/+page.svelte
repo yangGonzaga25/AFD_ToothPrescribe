@@ -3,9 +3,6 @@
 </script>
 
 <style>
-    /* Make sure the body and html fill the entire viewport and prevent scrolling */
-    
-
     header {
         display: flex;
         justify-content: flex-end;
@@ -17,10 +14,12 @@
         background-color: rgba(17, 28, 95, 0); /* Ensure header background is consistent */
         z-index: 1000; /* Keep header on top */
     }
+
     nav {
-    display: flex;
-    gap: 25px; /* Add space between the links */
-}
+        display: flex;
+        gap: 25px; /* Add space between the links */
+    }
+
     nav a {
         text-decoration: none;
         color: #000; /* Black text for the login */
@@ -59,18 +58,26 @@
     .right-section {
         flex: 1; /* Allow image section to take up remaining space */
         display: flex;
-        justify-content: center;
+        justify-content: center; /* Center the image */
         align-items: center;
+        margin: 0; /* Remove any margin */
+        padding: 0; /* Remove any padding */
+        width: 100%; /* Ensure it takes full width */
+        height: 100%; /* Ensure it takes full height */
     }
 
     .right-section img {
-        padding-left: 25rem;
-        max-width: 120%; /* Allow image to scale down */
-        max-height: 80%; /* Ensure it doesn't exceed screen height */
-        object-fit: contain; /* Prevent distortion */
+        width: auto; /* Allow width to adjust automatically */
+        height: 90vh; /* Set height to 90% of the viewport height */
+        max-width: 100%; /* Ensure it doesn't exceed the container width */
+        max-height: none; /* Remove max-height restriction */
+        object-fit: contain; /* Maintain aspect ratio */
+        padding: 0; /* Remove padding */
+        margin: 0; /* Remove margin */
     }
-
 </style>
+
+
 
 <header>
     <nav>
