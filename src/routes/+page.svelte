@@ -74,7 +74,6 @@
 
 <header>
     <nav>
-        <a href="/login-patient">Patient Login</a>
         <a href="/login">Dentist Login</a>
     </nav>
 </header>

@@ -164,6 +164,17 @@
     .content.shifted.collapsed {
         margin-left: 5rem;
     }
+    /* Style for the name container */
+.name-container {
+    margin-top: 11px;
+    display: flex;
+    flex-direction: column; /* Stack the names vertically */
+}
+
+.sidebar-header span {
+    margin: 0; /* Remove any default margin */
+}
+
 </style>
 
 <div class="layout">
@@ -173,7 +184,10 @@
                 <img src={isCollapsed ? "/images/icon-person.png" : "/images/logo(landing).png"} alt="Logo" />
             </div>
             {#if !isCollapsed}
-                <span>&lt;user_name&gt;</span>
+            <div class="name-container">
+                <span>Alfred Domingo</span>
+                <span>Fernalyn Domingo</span>
+            </div>
             {/if}
         </div>
 
