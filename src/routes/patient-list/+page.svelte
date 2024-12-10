@@ -76,17 +76,20 @@ async function editPatient(id: string) {
 }
 
 // Function to delete a patient
+// Function to delete a patient
 async function deletePatient(id: string) {
     try {
         // Delete the patient from Firestore
         await deleteDoc(doc(db, "patientProfiles", id));
         console.log(`Patient with ID: ${id} deleted successfully`);
-        // Refresh the patient list after deletion
-        fetchPatients();
+        
+        // Directly remove the deleted patient from the local 'patients' array
+        patients = patients.filter(patient => patient.id !== id);
     } catch (err) {
         console.error("Error deleting patient:", err);
     }
 }
+
 
 </script>
 
