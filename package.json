@@ -37,7 +37,7 @@
 		"@sveltejs/vite-plugin-svelte": "^4.0.0",
 		"autoprefixer": "^10.4.20",
 		"flowbite": "^2.5.2",
-		"flowbite-svelte": "^0.47.3",
+		"flowbite-svelte": "^0.47.4",
 		"flowbite-svelte-icons": "^2.0.2",
 		"publint": "^0.2.0",
 		"svelte": "^5.0.0",

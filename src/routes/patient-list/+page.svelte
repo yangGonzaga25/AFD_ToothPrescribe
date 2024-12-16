@@ -1,96 +1,113 @@
 <script lang="ts">
-   import Sidebar from '../sidenav/+page.svelte'; // Import the Sidebar component
-import { onMount } from 'svelte';
-import { firebaseConfig } from "$lib/firebaseConfig"; // Import Firebase config
-import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, getDocs, deleteDoc, doc, updateDoc } from 'firebase/firestore';
-import { EditSolid, TrashBinSolid } from 'flowbite-svelte-icons'; // Import Flowbite icons
+    import Sidebar from '../sidenav/+page.svelte'; // Import the Sidebar component
+    import { onMount } from 'svelte';
+    import { firebaseConfig } from "$lib/firebaseConfig"; // Import Firebase config
+    import { initializeApp } from 'firebase/app';
+    import { getFirestore, collection, getDocs, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+    import { EditSolid, TrashBinSolid } from 'flowbite-svelte-icons'; // Import Flowbite icons
+    import { Table, TableBody, TableBodyCell, TableBodyRow, TableHead, TableHeadCell } from 'flowbite-svelte';
+    import { Pagination } from 'flowbite-svelte'; // Import Flowbite Pagination
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);  // Initialize Firestore
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);  // Initialize Firestore
 
-let isCollapsed = false;
+    let isCollapsed = false;
+    let currentPage = 1;
+    let patientsPerPage = 10;
 
-function toggleSidebar() {
-    isCollapsed = !isCollapsed;
-}
-
-function logout() {
-    window.location.href = "/"; // Redirect to main landing page
-}
-
-type Patient = {
-    id: string;
-    name: string;
-    address: string;
-    phone: string;
-    age: number;
-    // Add other relevant fields as necessary
-};
-
-let patients: Patient[] = []; // Explicitly define the type of patients
-let searchTerm = '';
-let isLoading = true;
-let error: string | null = null; // Explicitly define the type of error
-
-// Fetch user data from Firebase Firestore
-async function fetchPatients() {
-    try {
-        const querySnapshot = await getDocs(collection(db, "patientProfiles")); // 'patients' is the Firestore collection name
-        patients = querySnapshot.docs.map(doc => ({
-            id: doc.id,
-            name: doc.data().name,
-            address: doc.data().address,
-            phone: doc.data().phone,
-            age: doc.data().age
-        }));
-    } catch (err) {
-        error = (err as Error).message; // Type assertion to Error
-    } finally {
-        isLoading = false;
+    function toggleSidebar() {
+        isCollapsed = !isCollapsed;
     }
-}
 
-// Call fetchPatients on component mount
-onMount(() => {
-    fetchPatients();
-});
-
-// Function to filter patients based on search term
-function filterPatients() {
-    return patients.filter(patient => 
-        patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        patient.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        patient.phone.includes(searchTerm) ||
-        patient.age.toString().includes(searchTerm)
-    );
-}
-
-// Function to edit a patient's details
-async function editPatient(id: string) {
-    console.log(`Editing patient with ID: ${id}`);
-    // Redirect or show an edit form here, for example:
-    // window.location.href = `/editPatient/${id}`;
-    // Or, you could open a modal and update the patient details.
-}
-
-// Function to delete a patient
-// Function to delete a patient
-async function deletePatient(id: string) {
-    try {
-        // Delete the patient from Firestore
-        await deleteDoc(doc(db, "patientProfiles", id));
-        console.log(`Patient with ID: ${id} deleted successfully`);
-        
-        // Directly remove the deleted patient from the local 'patients' array
-        patients = patients.filter(patient => patient.id !== id);
-    } catch (err) {
-        console.error("Error deleting patient:", err);
+    function logout() {
+        window.location.href = "/"; // Redirect to main landing page
     }
-}
 
+    type Patient = {
+        lastName: any;
+        id: string;
+        name: string;
+        address: string;
+        phone: string;
+        age: number;
+        // Add other relevant fields as necessary
+    };
 
+    let patients: Patient[] = []; // Explicitly define the type of patients
+    let searchTerm = '';
+    let isLoading = true;
+    let error: string | null = null; // Explicitly define the type of error
+
+    // Fetch user data from Firebase Firestore
+    async function fetchPatients() {
+        try {
+            const querySnapshot = await getDocs(collection(db, "patientProfiles")); // 'patients' is the Firestore collection name
+            patients = querySnapshot.docs.map(doc => ({
+                id: doc.id,
+                name: doc.data().name,
+                lastName: doc.data().lastName || '',
+                address: doc.data().address,
+                phone: doc.data().phone,
+                age: doc.data().age
+            }));
+        } catch (err) {
+            error = (err as Error).message; // Type assertion to Error
+        } finally {
+            isLoading = false;
+        }
+    }
+
+    // Call fetchPatients on component mount
+    onMount(() => {
+        fetchPatients();
+    });
+
+    // Function to filter patients based on search term
+    function filterPatients() {
+        return patients.filter(patient => 
+            patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            patient.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            patient.phone.includes(searchTerm) ||
+            patient.age.toString().includes(searchTerm)
+        );
+    }
+
+    // Get patients for the current page
+    function getPaginatedPatients() {
+        const filteredPatients = filterPatients();
+        const startIndex = (currentPage - 1) * patientsPerPage;
+        const endIndex = startIndex + patientsPerPage;
+        return filteredPatients.slice(startIndex, endIndex);
+    }
+
+    // Function to change the current page
+    function goToPage(page: number) {
+        if (page < 1 || page > totalPages()) return;
+        currentPage = page;
+    }
+
+    // Function to calculate total pages
+    function totalPages() {
+        return Math.ceil(filterPatients().length / patientsPerPage);
+    }
+
+    // Function to edit a patient's details
+    async function editPatient(id: string) {
+        console.log(`Editing patient with ID: ${id}`);
+        // Redirect or show an edit form here
+    }
+
+    // Function to delete a patient
+    async function deletePatient(id: string) {
+        try {
+            await deleteDoc(doc(db, "patientProfiles", id));
+            console.log(`Patient with ID: ${id} deleted successfully`);
+            patients = patients.filter(patient => patient.id !== id);
+        } catch (err) {
+            console.error("Error deleting patient:", err);
+        }
+    }
 </script>
 
 <style>
@@ -105,7 +122,7 @@ async function deletePatient(id: string) {
         background-color: #f8f8f8;
         padding: 20px;
         overflow: auto;
-        margin-left: -10rem; /* Move to the left */
+        margin-left: -10rem;
         transition: margin-left 0.3s ease;
     }
 
@@ -122,22 +139,6 @@ async function deletePatient(id: string) {
         box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         padding: 20px;
         overflow-x: auto;
-    }
-
-    table {
-        width: 100%;
-        border-collapse: collapse;
-        text-align: left;
-    }
-
-    th, td {
-        padding: 12px 15px;
-        border: 1px solid #ddd;
-    }
-
-    th {
-        background-color: #f4f4f4;
-        font-weight: bold;
     }
 
     .search-bar {
@@ -158,82 +159,82 @@ async function deletePatient(id: string) {
         justify-content: flex-end;
         margin-top: 10px;
     }
-
-    .pagination button {
-        margin: 0 5px;
-        padding: 5px 10px;
-        border: 1px solid #ddd;
-        background-color: white;
-        cursor: pointer;
-    }
-
-    .pagination button:hover {
-        background-color: #f4f4f4;
-    }
 </style>
 
 <div class="dashboard">
-    <!-- Sidebar -->
     <Sidebar {isCollapsed} {toggleSidebar} {logout} />
 
-    <!-- Main Content -->
     <div class="content" style="margin-left: {isCollapsed ? '-1rem' : '-2.4em'};">
         {#if isLoading}
             <p>Loading patients...</p>
         {:else if error}
             <p style="color: red;">{error}</p>
         {:else}
-            <div class="content-header">
-                <h1>Patient List</h1>
-            </div>
-            <div class="search-bar">
-                <input
-                    type="text"
-                    class="search-input"
-                    placeholder="Search"
-                    bind:value={searchTerm}
-                />
-            </div>
-            <div class="table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Patient Name</th>
-                            <th>Patient Address</th>
-                            <th>Phone Number</th>
-                            <th>Patient Age</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {#each filterPatients() as patient (patient.id)}
-                        <tr>
-                            <td>{patient.id}</td>
-                            <td>{patient.name}</td>
-                            <td>{patient.address}</td>
-                            <td>{patient.phone}</td>
-                            <td>{patient.age}</td>
-                            <td>
-                                <!-- Edit and Delete buttons with Flowbite icons -->
-                                <button class="action-btn" on:click={() => editPatient(patient.id)}>
-                                    <EditSolid class="text-blue-500" /> 
-                                </button>
-                                <button class="action-btn" on:click={() => deletePatient(patient.id)}>
-                                    <TrashBinSolid class="text-red-500" /> 
-                                </button>
-                                
-                            </td>
-                        </tr>
+            <div style="padding: 40px; width: 100%; max-width: 50rem; margin: auto; margin-top: 50px; border-radius: 0.5rem; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); background-color: white;">
+                <div class="flex justify-between items-start mb-4">
+                    <div class="flex items-center">
+                        <img src="/images/logo(landing).png" alt="Logo" class="w-24 h-18 mr-4" />
+                        <div>
+                            <h1 class="font-bold text-lg">AF DOMINIC</h1>
+                            <p class="text-sm">DENTAL CLINIC</p>
+                            <p class="text-sm">#46 12th Street, Corner Gordon Ave New Kalalake</p>
+                            <p class="text-sm">afdominicdentalclinic@gmail.com</p>
+                            <p class="text-sm">0932 984 9554</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="content-header">
+                    <h1>Patient List</h1>
+                </div>
+
+                <div class="search-bar">
+                    <input
+                        type="text"
+                        class="search-input"
+                        placeholder="Search"
+                        bind:value={searchTerm}
+                    />
+                </div>
+
+                <div class="table-container">
+                    <Table shadow>
+                        <TableHead>
+                            <TableHeadCell>Full Name</TableHeadCell>
+                            <TableHeadCell>Patient Address</TableHeadCell>
+                            <TableHeadCell>Phone Number</TableHeadCell>
+                            <TableHeadCell>Patient Age</TableHeadCell>
+                            <TableHeadCell>Action</TableHeadCell>
+                        </TableHead>
+                        <TableBody tableBodyClass="divide-y">
+                            {#each getPaginatedPatients() as patient (patient.id)}
+                            <TableBodyRow>
+                                <TableBodyCell>{patient.name} {patient.lastName}</TableBodyCell>
+                                <TableBodyCell>{patient.address}</TableBodyCell>
+                                <TableBodyCell>{patient.phone}</TableBodyCell>
+                                <TableBodyCell>
+                                    <div style="display: flex; justify-content: center; align-items: center; height: 100%;">{patient.age}</div>
+                                </TableBodyCell>
+                                <TableBodyCell>
+                                    <button class="action-btn" on:click={() => editPatient(patient.id)}>
+                                        <EditSolid class="text-blue-500" />
+                                    </button>
+                                    <button class="action-btn" on:click={() => deletePatient(patient.id)}>
+                                        <TrashBinSolid class="text-red-500" />
+                                    </button>
+                                </TableBodyCell>
+                            </TableBodyRow>
+                            {/each}
+                        </TableBody>
+                    </Table>
+
+                    <div class="pagination">
+                        <button on:click={() => goToPage(currentPage - 1)} disabled={currentPage === 1}>&laquo;</button>
+                        {#each Array(totalPages()) as _, i}
+                            <button on:click={() => goToPage(i + 1)} class={currentPage === i + 1 ? '' : ''}>{i + 1}</button>
                         {/each}
-                    </tbody>
-                </table>
-                <div class="pagination">
-                    <button disabled>&laquo;</button>
-                    <button>1</button>
-                    <button>2</button>
-                    <button>3</button>
-                    <button>&raquo;</button>
+                        <button on:click={() => goToPage(currentPage + 1)} disabled={currentPage === totalPages()}>&raquo;</button>
+                    </div>
                 </div>
             </div>
         {/if}
