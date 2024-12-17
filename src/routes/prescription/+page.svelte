@@ -1,4 +1,5 @@
 <script lang="ts">
+     import Sidebar from '../sidenav/+page.svelte'; // Import the Sidebar component
     import { onMount } from 'svelte';
     import { firebaseConfig } from "$lib/firebaseConfig"; // Import Firebase config
     import { initializeApp } from 'firebase/app';
@@ -8,12 +9,19 @@
     // Initialize Firebase
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-
+    let isCollapsed = false;
     let patients: any[] = [];
     let prescribedPatients: any[] = [];
     let searchTerm = '';  // Holds the search term entered by the user
     let filteredPatients: any[] = [];
 
+    function toggleSidebar() {
+        isCollapsed = !isCollapsed;
+    }
+
+    function logout() {
+        window.location.href = "/"; // Redirect to main landing page
+    }
     // Fetch all patients from Firestore
     async function fetchPatients() {
         const querySnapshot = await getDocs(collection(db, "patientProfiles"));
@@ -84,11 +92,12 @@
 <style>
     @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css');
     
-    .center-container {
-        display: grid;
-        place-items: center; /* Center both horizontally and vertically */
-        height: 100vh; /* Full viewport height */
+    .dashboard {
+        display: flex;
+        height: 100vh;
+        overflow: hidden;
     }
+    
 
     input {
         width: 100%;
@@ -128,8 +137,9 @@
     
 </style>
 
-<div class="center-container">
-  <div style="padding: 40px; width: 100%; max-width: 50rem; margin: auto; margin-top: 50px; border-radius: 0.5rem; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); background-color: white;">
+<div class="dashboard">
+    <Sidebar {isCollapsed} {toggleSidebar} {logout} />
+  <div style="padding: 40px; width: 100%; max-width: 50rem; margin: 100px; border-radius: 0.5rem; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); background-color: white;">
         <!-- Header -->
         <div class="flex justify-between items-start">
             <div class="flex items-center">
