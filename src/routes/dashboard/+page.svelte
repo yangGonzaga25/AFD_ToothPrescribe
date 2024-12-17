@@ -123,7 +123,7 @@
 
     .card .icon {
         font-size: 2rem;
-        color: #007bb5;
+        color: black !important;
     }
 
     .card .text {
@@ -139,6 +139,11 @@
         margin: 0;
         color: #555;
     }
+    .icon {
+    font-size: 2rem;
+    color: black;
+    }
+
 </style>
 <div class="dashboard">
     <!-- Sidebar -->
@@ -152,47 +157,47 @@
 
         <div class="cards">
             <div class="card">
-                <span class="icon">📆</span>
+                <span class="icon fas fa-calendar-alt"></span>
                 <div class="text">
                     <h3>{stats.newAppointments}</h3>
                     <p>New Appointments</p>
                 </div>
             </div>
             <div class="card">
-                <span class="icon">👥</span>
+                <span class="icon fas fa-users"></span>
                 <div class="text">
                     <h3>{stats.totalPatients}</h3>
                     <p>Total Patients</p>
                 </div>
             </div>
             <div class="card">
-                <span class="icon">👤</span>
+                <span class="icon fas fa-user"></span>
                 <div class="text">
                     <h3>{stats.todaysPatients}</h3>
                     <p>Today's Patients</p>
                 </div>
             </div>
             <div class="card">
-                <span class="icon">📅</span>
+                <span class="icon fas fa-calendar-check"></span>
                 <div class="text">
                     <h3>{stats.todaysAppointments}</h3>
                     <p>Today's Appointments</p>
                 </div>
             </div>
             <div class="card">
-                <span class="icon">📜</span>
+                <span class="icon fas fa-prescription"></span>
                 <div class="text">
                     <h3>{stats.todaysPrescriptions}</h3>
                     <p>Today's Prescriptions</p>
                 </div>
             </div>
             <div class="card">
-                <span class="icon">📜</span>
+                <span class="icon fas fa-file-prescription"></span>
                 <div class="text">
                     <h3>{stats.totalPrescriptions}</h3>
                     <p>Total Prescriptions</p>
                 </div>
             </div>
-        </div>
+        </div>        
     </div>
 </div>
