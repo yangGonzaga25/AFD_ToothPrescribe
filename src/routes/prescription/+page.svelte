@@ -6,10 +6,12 @@
     import { initializeApp } from 'firebase/app';
     import { getFirestore, collection, getDocs } from 'firebase/firestore'; // Firebase Firestore functions
     import { goto } from '$app/navigation'; // To programmatically navigate
-    import { EyeOutline } from 'flowbite-svelte-icons';
+    import { EyeOutline } from 'flowbite-svelte-icons'; // Eye icon for viewing prescriptions
+
     // Initialize Firebase
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
+
     let isCollapsed = false;
     let patients: any[] = [];
     let prescribedPatients: any[] = [];
@@ -17,80 +19,75 @@
     let filteredPatients: any[] = [];
     
     let showModal = false; // Controls the visibility of the modal
-    let currentPrescription: any = {}; // Stores the prescription details to be displayed in the modal
+    let currentPatient: any = {}; // Stores the current patient to display their prescriptions
 
+    // Toggle sidebar collapse
     function toggleSidebar() {
         isCollapsed = !isCollapsed;
     }
 
+    // Logout function
     function logout() {
         window.location.href = "/"; // Redirect to main landing page
     }
     
     // Fetch all patients from Firestore
     async function fetchPatients() {
-    try {
-        const querySnapshot = await getDocs(collection(db, "patientProfiles"));
-        patients = querySnapshot.docs.map(doc => ({
-            id: doc.id,
-            name: doc.data().name,
-            lastName: doc.data().lastName,
-            address: doc.data().address,
-            phone: doc.data().phone,
-            age: doc.data().age,
-            instructions: doc.data().instructions || '',
-            medication: doc.data().medication || ''
-        }));
-        filteredPatients = [...patients];
-    } catch (error) {
-        console.error("Error fetching patients:", error);
+        try {
+            const querySnapshot = await getDocs(collection(db, "patientProfiles"));
+            patients = querySnapshot.docs.map(doc => ({
+                id: doc.id,
+                name: doc.data().name,
+                lastName: doc.data().lastName,
+                address: doc.data().address,
+                phone: doc.data().phone,
+                age: doc.data().age,
+                instructions: doc.data().instructions || '',
+                medication: doc.data().medication || ''
+            }));
+            filteredPatients = [...patients];
+        } catch (error) {
+            console.error("Error fetching patients:", error);
+        }
     }
-}
 
     // Fetch prescribed patients and map to patient profiles
-   // Fetch prescribed patients and map to patient profiles
-   async function fetchPrescribedPatients() {
-    const prescriptionsSnapshot = await getDocs(collection(db, "prescriptions"));
-    const prescriptions = prescriptionsSnapshot.docs.map(doc => ({
-        id: doc.id,
-        patientId: doc.data().patientId,
-        instructions: doc.data().instructions || '',
-        medications: doc.data().medication || '',
-        dateVisited: doc.data().dateVisited || '',
-        prescriber: doc.data().prescriber || '',
-        qtyRefills: doc.data().qtyRefills || ''
-    }));
+    async function fetchPrescribedPatients() {
+        const prescriptionsSnapshot = await getDocs(collection(db, "prescriptions"));
+        const prescriptions = prescriptionsSnapshot.docs.map(doc => ({
+            id: doc.id,
+            patientId: doc.data().patientId,
+            instructions: doc.data().instructions || '',
+            medications: doc.data().medication || '',
+            dateVisited: doc.data().dateVisited || '',
+            prescriber: doc.data().prescriber || '',
+            qtyRefills: doc.data().qtyRefills || ''
+        }));
 
-    // Fetch patient details from another collection (assuming you have a patients collection)
-    const patientsSnapshot = await getDocs(collection(db, "patientProfiles"));
-    const patients = patientsSnapshot.docs.map(doc => ({
-        id: doc.id,
-        name: doc.data().name,           // Assuming 'name' is the first name
-        lastName: doc.data().lastName,   // Assuming 'lastName' is the last name
-        address: doc.data().address,
-        phone: doc.data().phone,
-        age: doc.data().age
-    }));
+        // Fetch patient details from another collection (assuming you have a patients collection)
+        const patientsSnapshot = await getDocs(collection(db, "patientProfiles"));
+        const patients = patientsSnapshot.docs.map(doc => ({
+            id: doc.id,
+            name: doc.data().name,           // Assuming 'name' is the first name
+            lastName: doc.data().lastName,   // Assuming 'lastName' is the last name
+            address: doc.data().address,
+            phone: doc.data().phone,
+            age: doc.data().age
+        }));
 
-    // Match prescriptions to patients by ID and map their details
-    prescribedPatients = prescriptions.map(prescription => {
-        const patient = patients.find(p => p.id === prescription.patientId);
-        return {
-            id: prescription.id,
-            fullName: `${patient?.name || ''} ${patient?.lastName || ''}`,  // Concatenating first and last name
-            address: patient?.address || 'Unknown',
-            phone: patient?.phone || 'Unknown',
-            age: patient?.age || 'Unknown',
-            instructions: prescription.instructions,
-            medications: prescription.medications,
-            dateVisited: prescription.dateVisited,
-            prescriber: prescription.prescriber,
-            qtyRefills: prescription.qtyRefills
-        };
-    });
-}
-
-
+        // Map prescriptions to patients and group prescriptions by patient
+        prescribedPatients = patients.map(patient => {
+            const patientPrescriptions = prescriptions.filter(prescription => prescription.patientId === patient.id);
+            return {
+                id: patient.id,
+                fullName: `${patient.name} ${patient.lastName}`,  // Concatenating first and last name
+                address: patient.address,
+                phone: patient.phone,
+                age: patient.age,
+                prescriptions: patientPrescriptions
+            };
+        });
+    }
 
     // Filter patients based on search term
     function filterPatients() {
@@ -112,29 +109,32 @@
         await fetchPrescribedPatients();
     });
 
+    // Add new prescription function
     function addPrescription(id: string | undefined) {
-    // Check if the patient is already prescribed
-    const isPrescribed = prescribedPatients.some(patient => patient.id === id);
-    if (isPrescribed) {
-        alert("This patient has already been prescribed.");
-    } else {
-        if (id) {
-            goto(`/add-prescription1/${id}`);
+        // Check if the patient is already prescribed
+        const isPrescribed = prescribedPatients.some(patient => patient.id === id);
+        if (isPrescribed) {
+            alert("This patient has already been prescribed.");
+        } else {
+            if (id) {
+                goto(`/add-prescription1/${id}`);
+            }
         }
     }
-}
 
-
+    // Open the modal to view prescriptions of the selected patient
     function openPrescriptionModal(patient: any) {
-        currentPrescription = patient;
+        currentPatient = patient;
         showModal = true;
     }
 
+    // Close the modal
     function closeModal() {
         showModal = false;
-        currentPrescription = {};
+        currentPatient = {};
     }
 </script>
+
 
 <style>
     @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css');
@@ -279,67 +279,87 @@
         {#if prescribedPatients.length === 0}
             <p>No prescribed patients found.</p>
         {:else}
-            <table>
-                <thead>
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Address</th>
+                    <th>Phone</th>
+                    <th>Age</th>
+                    <th>Prescription</th>
+                </tr>
+            </thead>
+            <tbody>
+                {#each prescribedPatients as patient (patient.id)}
                     <tr>
-                        <th>Name</th>
-                        <th>Address</th>
-                        <th>Phone</th>
-                        <th>Age</th>
-                        <th>Prescription</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {#each prescribedPatients as patient (patient.id)}
-                        <tr>
-                            <td>{patient.fullName}</td>
-                            <td>{patient.address}</td>
-                            <td>{patient.phone}</td>
-                            <td>{patient.age}</td>
-                            <td> <button 
+                        <td>{patient.fullName}</td>
+                        <td>{patient.address}</td>
+                        <td>{patient.phone}</td>
+                        <td>{patient.age}</td>
+                        <td>
+                            <button 
                                 on:click={() => openPrescriptionModal(patient)} 
                                 class="flex items-center bg-none border-none cursor-pointer text-blue-500 hover:text-700"
-                              >
+                            >
                                 <EyeOutline class="w-5 h-5 mr-1" /> <!-- Icon with small margin-right -->
                                 <span>View</span> <!-- Text -->
-                              </button></td>
-                        </tr>
-                    {/each}
-                </tbody>
-            </table>
+                            </button>
+                        </td>
+                    </tr>
+                {/each}
+            </tbody>
+        </table>
+        
         {/if}
     </div>
 </div>
-
+<!-- Modal Content -->
 {#if showModal}
-    <div class="modal">
-        <div class="modal-content">
-            <h2>Prescription for {currentPrescription.fullName}</h2>  <!-- Displaying full name -->
-            <p><strong>address: </strong> {currentPrescription.address}</p>
-            <p><strong>age:</strong> {currentPrescription.age}</p>
-            <p><strong>phone:</strong> {currentPrescription.phone}</p>
+    <div class="modal fixed inset-0 bg-gray-500 bg-opacity-50 flex justify-center items-center z-50">
+        <div class="modal-content bg-white p-6 rounded-lg shadow-lg w-3/4 md:w-1/2">
+            <h3 class="text-xl font-semibold mb-4">Prescription Details</h3>
+            <p><strong>Patient Name:</strong> {currentPatient.fullName}</p>
+            <p><strong>Address:</strong> {currentPatient.address}</p>
+            <p><strong>Phone:</strong> {currentPatient.phone}</p>
+            <p><strong>Age:</strong> {currentPatient.age}</p>
 
-            <!-- Prescription Details Table -->
-            <Table class="mt-2">
+            <!-- Display all prescriptions in a table -->
+            <Table shadow class="mt-4">
                 <TableHead>
-                    <TableHeadCell>Date Visited</TableHeadCell>
-                    <TableHeadCell>Medication</TableHeadCell>
                     <TableHeadCell>Instructions</TableHeadCell>
-                    <TableHeadCell>Qty/Refills</TableHeadCell>
+                    <TableHeadCell>Medications</TableHeadCell>
+                    <TableHeadCell>Date Visited</TableHeadCell>
                     <TableHeadCell>Prescriber</TableHeadCell>
+                    <TableHeadCell>Qty Refills</TableHeadCell>
                 </TableHead>
-                <TableBody>
+                <TableBody tableBodyClass="divide-y">
+                    {#each currentPatient.prescriptions as prescription}
                     <TableBodyRow>
-                        <TableBodyCell style="text-align: center;">{currentPrescription.dateVisited || 'Not available'}</TableBodyCell>
-                        <TableBodyCell style="text-align: center;">{currentPrescription.medications || 'Not available'}</TableBodyCell>
-                        <TableBodyCell style="text-align: center;">{currentPrescription.instructions || 'Not available'}</TableBodyCell>
-                        <TableBodyCell style="text-align: center;">{currentPrescription.qtyRefills || 'Not available'}</TableBodyCell>
-                        <TableBodyCell style="text-align: center;">{currentPrescription.prescriber || 'Not available'}</TableBodyCell>
+                        <TableBodyCell class="text-center">{prescription.instructions}</TableBodyCell>
+                        <TableBodyCell class="text-center">{prescription.medications}</TableBodyCell>
+                        <TableBodyCell class="text-center">{prescription.dateVisited}</TableBodyCell>
+                        <TableBodyCell class="text-center">{prescription.prescriber}</TableBodyCell>
+                        <TableBodyCell class="text-center">{prescription.qtyRefills}</TableBodyCell>
                     </TableBodyRow>
+                    {/each}
                 </TableBody>
             </Table>
 
-            <button class="close-btn" on:click={closeModal}>Close</button>
+            <!-- Add New Prescription Button -->
+            <button
+                on:click={() => goto(`/add-prescription1/${currentPatient.id}`)}
+                class="bg-green-500 text-white py-2 px-4 rounded mt-4 hover:bg-green-600"
+            >
+                Add New Prescription
+            </button>
+            
+            <!-- Close Button -->
+            <button 
+                on:click={closeModal} 
+                class="bg-red-500 text-white py-2 px-4 rounded mt-4 hover:bg-red-600"
+            >
+                Close
+            </button>
         </div>
     </div>
 {/if}
