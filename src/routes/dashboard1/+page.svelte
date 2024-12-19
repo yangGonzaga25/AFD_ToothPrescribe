@@ -473,30 +473,40 @@ fetchAppointments();
         {#if isViewingAppointments}
             <div class="appointment-list">
                 {#each appointments as appointment (appointment.id)}
-    <div class="appointment-item">
-        <p>Date: {appointment.date}</p>
-        <p>Time: {appointment.time}</p>
-        <p>Service: {appointment.service}</p>
-        <p>Patient: {appointment.patientName}</p>
-        <div class="actions">
-            {#if appointment.status !== "Completed"}
-                {#if isEditable(appointment.status)}
-                    <button class="button" on:click={() => openModal(appointment.id, "edit")}>Edit</button>
-                {:else}
-                    <button class="button" on:click={() => openModal(appointment.id, "accept")}>Accept</button>
-                    <button class="button decline" on:click={() => openModal(appointment.id, "decline")}>Decline</button>
-                {/if}
-                <!-- Add the "Done" button with confirmation modal -->
-                {#if appointment.status === "Accepted"}
-                    <button class="button" on:click={() => openDoneModal(appointment.id)}>Done</button>
-                {/if}
-            {:else}
-                <!-- If appointment is marked as Done, show "Marked as Done" message -->
-                <p style="color: green; font-weight: bold;">Marked as Done</p>
-            {/if}
-        </div>
-    </div>
-{/each}
+                <div class="appointment-item">
+                    <p>Date: {appointment.date}</p>
+                    <p>Time: {appointment.time}</p>
+                    <p>Service: {appointment.service}</p>
+                    <p>Patient: {appointment.patientName}</p>
+                    <p>
+                      Status: 
+                      {#if appointment.status === 'Completed'}
+                        <span class="text-green-600 font-semibold">Completed</span>
+                      {:else if appointment.status === 'Accepted'}
+                        <span class="text-blue-600 font-semibold">Accepted</span>
+                      {:else if appointment.status === 'Declined'}
+                        <span class="text-red-600 font-semibold">Declined</span>
+                      {:else if appointment.status === 'Pending'}
+                        <span class="text-yellow-600 font-semibold">Pending</span>
+                      {:else}
+                        <span class="text-gray-600 font-semibold">{appointment.status}</span>
+                      {/if}
+                    </p>
+                    <div class="actions">
+                      {#if appointment.status !== "Completed"}
+                        {#if isEditable(appointment.status)}
+                          <button class="button" on:click={() => openModal(appointment.id, "edit")}>Edit</button>
+                        {:else}
+                          <button class="button" on:click={() => openModal(appointment.id, "accept")}>Accept</button>
+                          <button class="button decline" on:click={() => openModal(appointment.id, "decline")}>Decline</button>
+                        {/if}
+                        {#if appointment.status === "Accepted"}
+                          <button class="button" on:click={() => openDoneModal(appointment.id)}>Done</button>
+                        {/if}
+                      {/if}
+                    </div>
+                  </div>
+                  {/each}
 
             </div>
         {/if}
