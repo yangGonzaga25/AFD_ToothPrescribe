@@ -137,6 +137,71 @@
 
 
 <style>
+  /* Use :global to ensure these styles are applied to the button component */
+:global(button.delete-prescription) {
+  background-color: #f44336;
+  color: white;
+  padding: 5px 10px;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  border-radius: 0.375rem; /* Rounded corners */
+  transition: background-color 0.3s, transform 0.2s; /* Smooth transitions */
+}
+
+:global(button.delete-prescription):hover {
+  background-color: #e53935; /* Darker red on hover */
+  transform: translateY(-2px); /* Slight lift effect */
+}
+
+:global(button.delete-prescription):active {
+  background-color: #d32f2f; /* Even darker red when clicked */
+  transform: translateY(0); /* Reset lift effect */
+}
+/* Use :global to apply the styles to the button component */
+:global(button.add-prescription) {
+  background-color: #4CAF50; /* Green background */
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  border-radius: 0.375rem; /* Rounded corners */
+  transition: background-color 0.3s, transform 0.2s; /* Smooth transitions */
+}
+
+:global(button.add-prescription):hover {
+  background-color: #45a049; /* Darker green on hover */
+  transform: translateY(-2px); /* Slight lift effect */
+}
+
+:global(button.add-prescription):active {
+  background-color: #388e3c; /* Even darker green when clicked */
+  transform: translateY(0); /* Reset lift effect */
+}
+
+/* For Blue color variant */
+:global(button.add-prescription-blue) {
+  background-color: #2196F3; /* Blue background */
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  border-radius: 0.375rem; /* Rounded corners */
+  transition: background-color 0.3s, transform 0.2s; /* Smooth transitions */
+}
+
+:global(button.add-prescription-blue):hover {
+  background-color: #1976D2; /* Darker blue on hover */
+  transform: translateY(-2px); /* Slight lift effect */
+}
+
+:global(button.add-prescription-blue):active {
+  background-color: #1565C0; /* Even darker blue when clicked */
+  transform: translateY(0); /* Reset lift effect */
+}
+
   .dashboard {
       display: flex;
       height: 100vh;
@@ -185,6 +250,7 @@
   th {
     background-color: #f2f2f2;
   }
+  
 </style>
 
 <div class="dashboard">
@@ -269,9 +335,13 @@
         <Input id="prescriber" type="text" bind:value={prescriber} required style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); border-radius: 0;"/>
       </div>
 
-      <Button type="submit" style="background-color: #4CAF50; color: white; padding: 10px 20px; border: none; cursor: pointer; font-size: 16px; border-radius: 0;">
-        Add Prescription
-      </Button>
+      <Button 
+      class="add-prescription"
+      type="submit"
+    >
+      Add Prescription
+    </Button>
+    
     </form>
 
     <!-- Past Prescriptions Table -->
@@ -285,6 +355,8 @@
             <th>Instructions</th>
             <th>Qty/Refills</th>
             <th>Prescriber</th>
+            <th>Action</th>
+
           </tr>
         </thead>
         <tbody>
@@ -298,11 +370,13 @@
               <td>
                 <!-- Add a Delete button -->
                 <Button 
-                  style="background-color: #f44336; color: white; padding: 5px 10px; border: none; cursor: pointer; font-size: 14px; border-radius: 0;"
-                  on:click={() => deletePrescription(prescription.id)}
-                >
-                  Delete
-                </Button>
+  class="delete-prescription"
+  on:click={() => deletePrescription(prescription.id)}
+>
+  Delete
+</Button>
+
+
               </td>
             </tr>
           {/each}
