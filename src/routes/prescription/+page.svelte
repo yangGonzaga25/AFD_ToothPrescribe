@@ -158,7 +158,7 @@
     }
 
     /* Hide the scrollbar for WebKit browsers (Chrome, Safari, etc.) */
-    .dashboard > div::-webkit-scrollbar {
+    .dashboard > :-webkit-scrollbar {
         display: none;
     }
 
