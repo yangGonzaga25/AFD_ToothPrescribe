@@ -145,6 +145,30 @@
         overflow: hidden;
     }
 
+    /* This is the main content area that scrolls vertically */
+    .dashboard > div {
+        height: 100%;
+        overflow-y: auto; /* Enables scrolling */
+        scrollbar-width: none; /* Hide scrollbar in Firefox */
+        -ms-overflow-style: none; /* Hide scrollbar in IE/Edge */
+    }
+
+    /* Hide the scrollbar for WebKit browsers (Chrome, Safari, etc.) */
+    .dashboard > div::-webkit-scrollbar {
+        display: none;
+    }
+
+    .dashboard-content {
+        padding: 40px;
+        width: 100%;
+        max-width: 50rem;
+        height: 100%; /* Full height for the content area */
+        margin: 100px auto;
+        margin-top: 30px;
+        border-radius: 0.5rem;
+        overflow-y: auto; /* Allow scrolling */
+    }
+
     input {
         width: 100%;
         padding: 8px;
@@ -188,21 +212,17 @@
         max-width: 600px;
         width: 100%;
     }
+    
 
    
     
 </style>
 <div class="dashboard" style="display: flex; flex-direction: row;">
     <Sidebar {isCollapsed} {toggleSidebar} {logout} />
-  
+    <div class="dashboard-content">
     <div style="padding: 40px; width: 100%; max-width: 50rem; height: 600px; margin: 100px auto; margin-top: 30px; border-radius: 0.5rem; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); background-color: white; overflow-y: auto;">
 
-        <style>
-            /* Hide the scrollbar */
-            div[style*="overflow-y: auto"]::-webkit-scrollbar {
-                display: none;
-            }
-        </style>
+    
 
         <!-- Header -->
         <div class="flex justify-between items-start">
@@ -346,3 +366,4 @@
         </div>
     </div>
 {/if}
+</div>
