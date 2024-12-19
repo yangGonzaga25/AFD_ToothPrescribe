@@ -143,6 +143,10 @@
         display: flex;
         height: 100vh;
         overflow: hidden;
+        -ms-overflow-style: none;
+        overflow-y: auto; /* Enables scrolling */
+        scrollbar-width: none; /* Hide scrollbar in Firefox */
+        -ms-overflow-style: none; /* Hide scrollbar in IE/Edge */
     }
 
     /* This is the main content area that scrolls vertically */
@@ -166,7 +170,6 @@
         margin: 100px auto;
         margin-top: 30px;
         border-radius: 0.5rem;
-        overflow-y: auto; /* Allow scrolling */
     }
 
     input {
