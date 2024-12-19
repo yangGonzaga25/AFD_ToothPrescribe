@@ -391,6 +391,10 @@ fetchAppointments();
         cursor: pointer;
     }
 
+    .cards :hover {
+        transform: scale(1.05); /* Slightly enlarge the item on hover */
+    }
+
     .card .icon {
         font-size: 2rem;
         color: black !important;
