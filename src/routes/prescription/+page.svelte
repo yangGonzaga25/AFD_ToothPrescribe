@@ -153,20 +153,7 @@
         border-radius: 4px;
     }
 
-    table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 10px;
-    }
 
-    table, th, td {
-        border: 1px solid #ddd;
-    }
-
-    th, td {
-        padding: 8px;
-        text-align: left;
-    }
 
     button {
         padding: 6px 12px;
@@ -202,18 +189,7 @@
         width: 100%;
     }
 
-    .close-btn {
-        background-color: red;
-        color: white;
-        padding: 8px;
-        border-radius: 5px;
-        cursor: pointer;
-        margin-top: 10px;
-    }
-
-    .close-btn:hover {
-        background-color: darkred;
-    }
+   
     
 </style>
 <div class="dashboard" style="display: flex; flex-direction: row;">
@@ -248,28 +224,33 @@
         <!-- Patient Table (Filtered) -->
         {#if searchTerm.trim() !== '' && filteredPatients.length > 0}
             <h3>All Patients</h3>
-            <table>
+            <Table shadow class="mt-4 border border-gray-300">
                 <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Address</th>
-                        <th>Phone</th>
-                        <th>Age</th>
-                        <th>Actions</th>
-                    </tr>
+                  <tr>
+                    <TableHeadCell class="border border-gray-300">Name</TableHeadCell>
+                    <TableHeadCell class="border border-gray-300">Address</TableHeadCell>
+                    <TableHeadCell class="border border-gray-300">Phone</TableHeadCell>
+                    <TableHeadCell class="border border-gray-300">Age</TableHeadCell>
+                    <TableHeadCell class="border border-gray-300">Actions</TableHeadCell>
+                  </tr>
                 </thead>
-                <tbody>
-                    {#each filteredPatients as patient (patient.id)}
-                        <tr>
-                            <td>{patient.name}</td>
-                            <td>{patient.address}</td>
-                            <td>{patient.phone}</td>
-                            <td>{patient.age}</td>
-                            <td><button on:click={() => addPrescription(patient.id)}>Add Prescription</button></td>
-                        </tr>
-                    {/each}
-                </tbody>
-            </table>
+                <TableBody>
+                  {#each filteredPatients as patient (patient.id)}
+                    <tr>
+                      <TableBodyCell class="border border-gray-300">{patient.name} {patient.lastName}</TableBodyCell>
+                      <TableBodyCell class="border border-gray-300">{patient.address}</TableBodyCell>
+                      <TableBodyCell class="border border-gray-300">{patient.phone}</TableBodyCell>
+                      <TableBodyCell class="border border-gray-300">{patient.age}</TableBodyCell>
+                      <TableBodyCell class="border border-gray-300">
+                        <button on:click={() => addPrescription(patient.id)} class="bg-blue-500 text-white px-3 py-1 rounded">Add</button>
+                      </TableBodyCell>
+                    </tr>
+                  {/each}
+                </TableBody>
+              </Table>
+              
+       
+
         {:else if searchTerm.trim() !== ''}
             <p>No patients found matching the search term.</p>
         {/if}
@@ -279,38 +260,40 @@
         {#if prescribedPatients.length === 0}
             <p>No prescribed patients found.</p>
         {:else}
-        <table>
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Address</th>
-                    <th>Phone</th>
-                    <th>Age</th>
-                    <th>Prescription</th>
-                </tr>
-            </thead>
-            <tbody>
-                {#each prescribedPatients as patient (patient.id)}
+            <Table shadow class="mt-4 border border-gray-300"> <!-- Border added to the table -->
+                <thead>
                     <tr>
-                        <td>{patient.fullName}</td>
-                        <td>{patient.address}</td>
-                        <td>{patient.phone}</td>
-                        <td>{patient.age}</td>
-                        <td>
-                            <button 
-                                on:click={() => openPrescriptionModal(patient)} 
-                                class="flex items-center bg-none border-none cursor-pointer text-blue-500 hover:text-700"
-                            >
-                                <EyeOutline class="w-5 h-5 mr-1" /> <!-- Icon with small margin-right -->
-                                <span>View</span> <!-- Text -->
-                            </button>
-                        </td>
+                        <TableHeadCell class="border border-gray-300">Name</TableHeadCell>
+                        <TableHeadCell class="border border-gray-300">Address</TableHeadCell>
+                        <TableHeadCell class="border border-gray-300">Phone</TableHeadCell>
+                        <TableHeadCell class="border border-gray-300">Age</TableHeadCell>
+                        <TableHeadCell class="border border-gray-300">Prescription</TableHeadCell>
                     </tr>
-                {/each}
-            </tbody>
-        </table>
-        
+                </thead>
+                <TableBody tableBodyClass="divide-y">
+                    {#each prescribedPatients as patient (patient.id)}
+                        <tr>
+                            <TableBodyCell class="border border-gray-300">{patient.fullName}</TableBodyCell>
+                            <TableBodyCell class="border border-gray-300">{patient.address}</TableBodyCell>
+                            <TableBodyCell class="border border-gray-300">{patient.phone}</TableBodyCell>
+                            <TableBodyCell class="border border-gray-300">{patient.age}</TableBodyCell>
+                            <TableBodyCell class="border border-gray-300">
+                                <button 
+                                    on:click={() => openPrescriptionModal(patient)} 
+                                    class="flex items-center bg-none border-none cursor-pointer text-blue-500 hover:text-700"
+                                >
+                                    <EyeOutline class="w-5 h-5 mr-1" /> <!-- Icon with small margin-right -->
+                                    <span>View</span> <!-- Text -->
+                                </button>
+                            </TableBodyCell>
+                        </tr>
+                    {/each}
+                </TableBody>
+            </Table>
         {/if}
+        
+        
+
     </div>
 </div>
 <!-- Modal Content -->

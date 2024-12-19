@@ -4,9 +4,9 @@
     import { firebaseConfig } from "$lib/firebaseConfig"; // Import Firebase config
     import { initializeApp } from 'firebase/app';
     import { getFirestore, collection, getDocs, deleteDoc, doc, updateDoc } from 'firebase/firestore';
-    import { EditSolid, TrashBinSolid } from 'flowbite-svelte-icons'; // Import Flowbite icons
+    import { EditSolid,EyeOutline, TrashBinSolid } from 'flowbite-svelte-icons'; // Import Flowbite icons
     import { Table, TableBody, TableBodyCell, TableBodyRow, TableHead, TableHeadCell } from 'flowbite-svelte';
-    import { Pagination } from 'flowbite-svelte'; // Import Flowbite Pagination
+  
 
     // Initialize Firebase
     const app = initializeApp(firebaseConfig);
@@ -159,6 +159,7 @@
         justify-content: flex-end;
         margin-top: 10px;
     }
+    
 </style>
 
 <div class="dashboard">
@@ -215,13 +216,12 @@
                                 <TableBodyCell>
                                     <div style="display: flex; justify-content: center; align-items: center; height: 100%;">{patient.age}</div>
                                 </TableBodyCell>
-                                <TableBodyCell>
-                                    <button class="action-btn" on:click={() => editPatient(patient.id)}>
-                                        <EditSolid class="text-blue-500" />
+                                <TableBodyCell> 
+                                    <button>
+                                    <EyeOutline class="w-5 h-5 mr-1" /> <!-- Icon with small margin-right -->
+                                    <span>View</span> 
                                     </button>
-                                    <button class="action-btn" on:click={() => deletePatient(patient.id)}>
-                                        <TrashBinSolid class="text-red-500" />
-                                    </button>
+                                  
                                 </TableBodyCell>
                             </TableBodyRow>
                             {/each}
