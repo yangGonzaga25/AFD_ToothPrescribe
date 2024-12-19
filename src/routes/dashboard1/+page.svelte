@@ -114,7 +114,7 @@
             stats.todaysAppointments = todaysAppointmentsDocs.size;
 
             // Fetch total patients
-            const patientsCollection = collection(db, "patients");
+            const patientsCollection = collection(db, "users");
             const patientDocs = await getDocs(patientsCollection);
             stats.totalPatients = patientDocs.size;
 

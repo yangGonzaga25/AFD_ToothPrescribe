@@ -58,7 +58,7 @@
         }
     }
 
-    // Call fetchPatients on component mount
+    
     onMount(() => {
         fetchPatients();
     });
@@ -205,7 +205,6 @@
                             <TableHeadCell>Patient Address</TableHeadCell>
                             <TableHeadCell>Phone Number</TableHeadCell>
                             <TableHeadCell>Patient Age</TableHeadCell>
-                            <TableHeadCell>Action</TableHeadCell>
                         </TableHead>
                         <TableBody tableBodyClass="divide-y">
                             {#each getPaginatedPatients() as patient (patient.id)}
@@ -216,13 +215,7 @@
                                 <TableBodyCell>
                                     <div style="display: flex; justify-content: center; align-items: center; height: 100%;">{patient.age}</div>
                                 </TableBodyCell>
-                                <TableBodyCell> 
-                                    <button>
-                                    <EyeOutline class="w-5 h-5 mr-1" /> <!-- Icon with small margin-right -->
-                                    <span>View</span> 
-                                    </button>
-                                  
-                                </TableBodyCell>
+                                
                             </TableBodyRow>
                             {/each}
                         </TableBody>

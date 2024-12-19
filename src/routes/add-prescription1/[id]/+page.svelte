@@ -42,7 +42,7 @@
       const patientDoc = await getDoc(patientDocRef);
       if (patientDoc.exists()) {
         patient = patientDoc.data();
-        firstName = patient.firstName || '';  // Default to empty if not found
+        firstName = patient.name || '';  // Default to empty if not found
         lastName = patient.lastName || '';
         address = patient.address || '';
         age = patient.age || 0;  // Default age to 0 if not found
@@ -181,7 +181,7 @@
     </div>
 
     <!-- Form for Prescription -->
-    <h2 style="font-size: 2rem; font-weight: bold; margin-bottom: 1.5rem;">Add Prescription for {firstName} {lastName}</h2>
+    <h2 style="font-size: 2rem; font-weight: Ariel; margin-bottom: 1.5rem;">Add Prescription for {patient.name} {lastName}</h2>
 
     <div style="margin-bottom: 1.5rem;">
       <p><strong>Address:</strong> {address}</p>
