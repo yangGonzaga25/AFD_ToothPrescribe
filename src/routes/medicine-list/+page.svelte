@@ -107,6 +107,26 @@
 
 
 <style>
+    :global(button.add-button) {
+  background-color: #4CAF50; /* Green background */
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  border-radius: 0.375rem; /* Rounded corners */
+  transition: background-color 0.3s, transform 0.2s; /* Smooth transitions */
+}
+
+:global(button.add-button):hover {
+  background-color: #45a049; /* Darker green on hover */
+  transform: translateY(-2px); /* Slight lift effect */
+}
+
+:global(button.add-button):active {
+  background-color: #388e3c; /* Even darker green when clicked */
+  transform: translateY(0); /* Reset lift effect */
+}
       .dashboard {
         display: flex;
         height: 100vh;

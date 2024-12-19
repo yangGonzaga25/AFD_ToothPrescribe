@@ -139,6 +139,31 @@
 <style>
     @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css');
     
+    :global(button.view-button) {
+  display: flex;
+  align-items: center;
+  background-color: transparent; /* No background */
+  color: #1d4ed8; /* Blue color */
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  transition: color 0.3s, transform 0.2s;
+}
+
+:global(button.view-button:hover) {
+  color: #2563eb; /* Darker blue on hover */
+  transform: translateY(-2px); /* Slight lift effect */
+}
+
+:global(button.view-button:active) {
+  color: #1e40af; /* Even darker blue when clicked */
+  transform: translateY(0); /* Reset lift effect */
+}
+
+/* For the EyeOutline icon, ensuring proper alignment */
+:global(button.view-button .w-5.h-5) {
+  margin-right: 0.25rem; /* Small margin between icon and text */
+}
     .dashboard {
         display: flex;
         height: 100vh;
@@ -303,7 +328,7 @@
                             <TableBodyCell class="border border-gray-300">
                                 <button 
                                     on:click={() => openPrescriptionModal(patient)} 
-                                    class="flex items-center bg-none border-none cursor-pointer text-blue-500 hover:text-700"
+                                    class="view-button flex items-center bg-none border-none cursor-pointer text-blue-500 hover:text-blue-700"
                                 >
                                     <EyeOutline class="w-5 h-5 mr-1" /> <!-- Icon with small margin-right -->
                                     <span>View</span> <!-- Text -->
@@ -312,6 +337,7 @@
                         </tr>
                     {/each}
                 </TableBody>
+                
             </Table>
         {/if}
         
