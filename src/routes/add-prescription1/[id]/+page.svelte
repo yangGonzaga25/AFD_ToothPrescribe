@@ -3,7 +3,7 @@
   import { onMount } from 'svelte';
   import { firebaseConfig } from "$lib/firebaseConfig";
   import { initializeApp } from 'firebase/app';
-  import { getFirestore, doc, getDoc, setDoc, collection, getDocs } from 'firebase/firestore';
+  import { getFirestore, doc, deleteDoc, getDoc, setDoc, collection, getDocs } from 'firebase/firestore';
   import { Label, Input, Textarea, Button, Toast } from 'flowbite-svelte';
 
   const app = initializeApp(firebaseConfig);
@@ -42,6 +42,7 @@
     try {
       const patientDocRef = doc(db, "patientProfiles", patientId);
       const patientDoc = await getDoc(patientDocRef);
+     
       if (patientDoc.exists()) {
         patient = patientDoc.data();
         firstName = patient.firstName || '';
@@ -57,22 +58,36 @@
   }
 
   async function fetchPrescriptions() {
-    try {
-      const prescriptionsRef = collection(db, "prescriptions");
-      const prescriptionQuery = await getDocs(prescriptionsRef);
-      prescriptions = prescriptionQuery.docs
-        .filter(doc => doc.data().patientId === patientId)
-        .map(doc => doc.data());
-    } catch (error) {
-      console.error('Error fetching prescriptions: ', error);
-    }
+  try {
+    const prescriptionsRef = collection(db, "prescriptions");
+    const prescriptionQuery = await getDocs(prescriptionsRef);
+    prescriptions = prescriptionQuery.docs
+      .filter(doc => doc.data().patientId === patientId)
+      .map(doc => ({ ...doc.data(), id: doc.id })); // Add doc.id as id
+  } catch (error) {
+    console.error('Error fetching prescriptions: ', error);
   }
+}
 
   // Ensure this function is in the correct place
   function isValidNumber(value: string): boolean {
     const number = parseInt(value, 10);
     return !isNaN(number) && number > 0;
   }
+
+  async function deletePrescription(prescriptionId: string) {
+  try {
+    const prescriptionRef = doc(db, "prescriptions", prescriptionId);
+    await deleteDoc(prescriptionRef);
+    toastMessage = 'Prescription deleted successfully!';
+    toastType = 'success';
+    fetchPrescriptions(); // Refresh the prescription list after deletion
+  } catch (error) {
+    console.error('Error deleting prescription: ', error);
+    toastMessage = 'Error deleting prescription. Please try again.';
+    toastType = 'error';
+  }
+}
 
   async function submitPrescription() {
     if (!dateVisited || !medication || !instructions || !qtyRefills || !prescriber) {
@@ -278,9 +293,17 @@
               <td>{new Date(prescription.dateVisited).toLocaleDateString()}</td>
               <td>{prescription.medication}</td>
               <td>{prescription.instructions}</td>
-              <!-- Display only valid numbers, nothing if invalid -->
               <td>{isNaN(prescription.qtyRefills) || prescription.qtyRefills <= 0 ? '' : prescription.qtyRefills}</td>
               <td>{prescription.prescriber}</td>
+              <td>
+                <!-- Add a Delete button -->
+                <Button 
+                  style="background-color: #f44336; color: white; padding: 5px 10px; border: none; cursor: pointer; font-size: 14px; border-radius: 0;"
+                  on:click={() => deletePrescription(prescription.id)}
+                >
+                  Delete
+                </Button>
+              </td>
             </tr>
           {/each}
         </tbody>
