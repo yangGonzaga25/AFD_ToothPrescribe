@@ -1,51 +1,53 @@
 <script lang="ts">
-  import Sidebar from '../../sidenav/+page.svelte'; 
+    import Sidebar from '../../sidenav/+page.svelte'; 
   import { onMount } from 'svelte';
-  import { firebaseConfig } from "$lib/firebaseConfig"; // Import Firebase config
+  import { firebaseConfig } from "$lib/firebaseConfig";
   import { initializeApp } from 'firebase/app';
-  import { getFirestore, doc, getDoc, setDoc, collection, getDocs } from 'firebase/firestore'; // Firebase Firestore functions
-  import { goto } from '$app/navigation'; // To navigate
+  import { getFirestore, doc, getDoc, setDoc, collection, getDocs } from 'firebase/firestore';
   import { Label, Input, Textarea, Button, Toast } from 'flowbite-svelte';
 
-  // Initialize Firebase
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
-  let patientId: string = ''; 
-  let patient: any = {};  // Patient details from Firestore
-  let firstName: string = '';  // First name of the patient
-  let lastName: string = '';  // Last name of the patient
-  let address: string = '';  // Address of the patient
-  let age: number = 0; // Assuming age is a number
+  let patientId: string = '';
+  let patient: any = {};
+  let firstName: string = '';
+  let lastName: string = '';
+  let address: string = '';
+  let age: number = 0;
   let dateVisited: string = '';
   let medication: string = '';
   let instructions: string = '';
   let qtyRefills: string = '';
   let prescriber: string = '';
-  let prescriptions: any[] = []; // Array to store fetched prescriptions
+  let prescriptions: any[] = [];
   let isCollapsed = false;
   let toastMessage: string = '';
-  let toastType: 'success' | 'error' | null = null; // Toast message type
+  let toastType: 'success' | 'error' | null = null;
+  let today: string = new Date().toISOString().split('T')[0];
 
   let toggleSidebar = () => {
-      isCollapsed = !isCollapsed;
-  }
+    isCollapsed = !isCollapsed;
+  };
 
   let logout = () => {
-      window.location.href = "/"; // Redirect to main landing page
+    window.location.href = "/";
+  };
+  function handleQtyRefillsInput(event: Event) {
+    const inputElement = event.target as HTMLInputElement;
+    // Remove any non-numeric characters
+    inputElement.value = inputElement.value.replace(/[^0-9]/g, '');
   }
-
-  // Fetch the patient data based on patientId from the URL
   async function fetchPatientData() {
     try {
       const patientDocRef = doc(db, "patientProfiles", patientId);
       const patientDoc = await getDoc(patientDocRef);
       if (patientDoc.exists()) {
         patient = patientDoc.data();
-        firstName = patient.name || '';  // Default to empty if not found
+        firstName = patient.firstName || '';  // Default to empty if not found
         lastName = patient.lastName || '';
         address = patient.address || '';
-        age = patient.age || 0;  // Default age to 0 if not found
+        age = patient.age || 0;
       } else {
         console.error("No such patient!");
       }
@@ -54,58 +56,70 @@
     }
   }
 
-  // Fetch past prescriptions for the patient
   async function fetchPrescriptions() {
     try {
       const prescriptionsRef = collection(db, "prescriptions");
       const prescriptionQuery = await getDocs(prescriptionsRef);
       prescriptions = prescriptionQuery.docs
-        .filter(doc => doc.data().patientId === patientId) // Filter prescriptions for the patient
+        .filter(doc => doc.data().patientId === patientId)
         .map(doc => doc.data());
     } catch (error) {
       console.error('Error fetching prescriptions: ', error);
     }
   }
 
-  // Handle form submission with validation
-  async function submitPrescription() {
-      if (!dateVisited || !medication || !instructions || !qtyRefills || !prescriber) {
-          toastMessage = 'Please fill in all fields.'; // Set error message
-          toastType = 'error'; // Set toast type to error
-          return;
-      }
-
-      const prescriptionData = {
-          patientId: patientId,
-          dateVisited: dateVisited,
-          medication: medication,
-          instructions: instructions,
-          qtyRefills: qtyRefills,
-          prescriber: prescriber
-      };
-
-      // Save the prescription to Firestore
-      try {
-          await setDoc(doc(db, "prescriptions", `${patientId}_${new Date().toISOString()}`), prescriptionData);
-          toastMessage = 'Prescription added successfully!'; // Set success message
-          toastType = 'success'; // Set toast type to success
-          fetchPrescriptions(); // Refresh prescriptions list
-      } catch (error) {
-          console.error('Error adding prescription: ', error);
-          toastMessage = 'Error adding prescription. Please try again.'; // Set error message
-          toastType = 'error'; // Set toast type to error
-      }
+  // Ensure this function is in the correct place
+  function isValidNumber(value: string): boolean {
+    const number = parseInt(value, 10);
+    return !isNaN(number) && number > 0;
   }
 
-  // Get the 'patientId' from the URL
+  async function submitPrescription() {
+    if (!dateVisited || !medication || !instructions || !qtyRefills || !prescriber) {
+      toastMessage = 'Please fill in all fields.';
+      toastType = 'error';
+      return;
+    }
+
+    if (!isValidNumber(qtyRefills)) {
+      toastMessage = 'Quantity/Refills must be a valid positive number.';
+      toastType = 'error';
+      return;
+    }
+
+    const date = new Date(dateVisited);
+    const dateString = date.toISOString();
+
+    const prescriptionData = {
+      patientId: patientId,
+      dateVisited: dateString,
+      medication: medication,
+      instructions: instructions,
+      qtyRefills: qtyRefills,
+      prescriber: prescriber
+    };
+
+    try {
+      await setDoc(doc(db, "prescriptions", `${patientId}_${new Date().toISOString()}`), prescriptionData);
+      toastMessage = 'Prescription added successfully!';
+      toastType = 'success';
+      fetchPrescriptions();
+    } catch (error) {
+      console.error('Error adding prescription: ', error);
+      toastMessage = 'Error adding prescription. Please try again.';
+      toastType = 'error';
+    }
+  }
+
   onMount(() => {
-    const url = window.location.pathname; 
+    const url = window.location.pathname;
     const pathParts = url.split('/');
-    patientId = pathParts[pathParts.length - 1]; // Assuming the last part of the URL is the patient ID
-    fetchPatientData();  // Fetch patient data once patientId is available
-    fetchPrescriptions();  // Fetch past prescriptions once patient data is loaded
+    patientId = pathParts[pathParts.length - 1];
+    fetchPatientData();
+    fetchPrescriptions();
   });
 </script>
+
 
 <style>
   .dashboard {
@@ -190,10 +204,24 @@
 
     <form style="display: flex; flex-direction: column;" on:submit|preventDefault={submitPrescription}>
       <!-- Date Visited -->
+      <script lang="ts">
+        // Get the current date in the required format (YYYY-MM-DD)
+        let today: string = new Date().toISOString().split('T')[0]; 
+      </script>
+      
+      <!-- Date Visited -->
       <div style="margin-bottom: 1rem;">
         <Label for="dateVisited" style="display: block; margin-bottom: 0.5rem;">Date Visited</Label>
-        <Input id="dateVisited" type="date" bind:value={dateVisited} required style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); border-radius: 0;"/>
+        <Input 
+          id="dateVisited" 
+          type="date" 
+          bind:value={dateVisited} 
+          required 
+          style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); border-radius: 0;"
+          max={today} 
+        />
       </div>
+      
 
       <!-- Medication -->
       <div style="margin-bottom: 1rem;">
@@ -210,7 +238,14 @@
       <!-- Qty/Refills -->
       <div style="margin-bottom: 1rem;">
         <Label for="qtyRefills" style="display: block; margin-bottom: 0.5rem;">Qty/Refills</Label>
-        <Input id="qtyRefills" type="text" bind:value={qtyRefills} required style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); border-radius: 0;"/>
+        <Input 
+          id="qtyRefills" 
+          type="text" 
+          bind:value={qtyRefills} 
+          required
+          on:input={handleQtyRefillsInput}
+          style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); border-radius: 0;"
+        />
       </div>
 
       <!-- Prescriber -->
@@ -240,14 +275,16 @@
         <tbody>
           {#each prescriptions as prescription}
             <tr>
-              <td>{prescription.dateVisited}</td>
+              <td>{new Date(prescription.dateVisited).toLocaleDateString()}</td>
               <td>{prescription.medication}</td>
               <td>{prescription.instructions}</td>
-              <td>{prescription.qtyRefills}</td>
+              <!-- Display only valid numbers, nothing if invalid -->
+              <td>{isNaN(prescription.qtyRefills) || prescription.qtyRefills <= 0 ? '' : prescription.qtyRefills}</td>
               <td>{prescription.prescriber}</td>
             </tr>
           {/each}
         </tbody>
+        
       </table>
     {:else}
       <p>No past prescriptions available.</p>
