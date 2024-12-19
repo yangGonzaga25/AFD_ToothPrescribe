@@ -112,23 +112,19 @@
 
 <style>
     .dashboard {
-    display: flex;
-    height: 100vh;
-    overflow: hidden; /* Prevent internal scrollbars on the dashboard */
+        display: flex;
+        height: 100vh;
+        overflow: hidden;
     }
+
     .content {
-    flex-grow: 1;
-    background-color: #f8f8f8;
-    padding: 20px;
-    overflow: scroll; /* Allow content to scroll */
-    margin-left: -10rem;
-    transition: margin-left 0.3s ease;
-    max-height: 100vh; /* Prevent content from overflowing beyond viewport */
-}   
-    /* Hide the scrollbar */
-.content::-webkit-scrollbar {
-    display: none; /* Hide scrollbar */
-}
+        flex-grow: 1;
+        background-color: #f8f8f8;
+        padding: 20px;
+        overflow: auto;
+        margin-left: -10rem;
+        transition: margin-left 0.3s ease;
+    }
 
     .content-header {
         display: flex;
@@ -163,25 +159,6 @@
         justify-content: flex-end;
         margin-top: 10px;
     }
-    .view-button {
-    display: flex;                /* Use flexbox to align items */
-    align-items: center;          /* Vertically center the items */
-    padding: 6px 12px;
-    background-color: #4CAF50;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    }
-
-    .view-button:hover {
-        background-color: #45a049;
-    }
-
-    .view-button span {
-        margin-left: 4px;             /* Add some space between the icon and the text */
-    }
-
     
 </style>
 
@@ -240,11 +217,10 @@
                                     <div style="display: flex; justify-content: center; align-items: center; height: 100%;">{patient.age}</div>
                                 </TableBodyCell>
                                 <TableBodyCell> 
-                                    <button class="view-button">
-                                        <EyeOutline class="w-5 h-5 mr-1" />
-                                        <span>View</span>
+                                    <button>
+                                    <EyeOutline class="w-5 h-5 mr-1" /> <!-- Icon with small margin-right -->
+                                    <span>View</span> 
                                     </button>
-                                    
                                   
                                 </TableBodyCell>
                             </TableBodyRow>
