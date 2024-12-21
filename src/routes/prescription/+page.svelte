@@ -138,73 +138,172 @@
 
 <style>
     @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css');
-    
-    :global(button.view-button) {
-  display: flex;
-  align-items: center;
-  background-color: transparent; /* No background */
-  color: #1d4ed8; /* Blue color */
-  border: none;
-  font-size: 16px;
-  cursor: pointer;
-  transition: color 0.3s, transform 0.2s;
-}
-
-:global(button.view-button:hover) {
-  color: #2563eb; /* Darker blue on hover */
-  transform: translateY(-2px); /* Slight lift effect */
-}
-
-:global(button.view-button:active) {
-  color: #1e40af; /* Even darker blue when clicked */
-  transform: translateY(0); /* Reset lift effect */
-}
-
-/* For the EyeOutline icon, ensuring proper alignment */
-:global(button.view-button .w-5.h-5) {
-  margin-right: 0.25rem; /* Small margin between icon and text */
-}
-    .dashboard {
+    :global(.dashboard) {
         display: flex;
         height: 100vh;
         overflow: hidden;
-        -ms-overflow-style: none;
-        overflow-y: auto; /* Enables scrolling */
-        scrollbar-width: none; /* Hide scrollbar in Firefox */
-        -ms-overflow-style: none; /* Hide scrollbar in IE/Edge */
+        font-family: 'Roboto', sans-serif;
     }
 
-    /* This is the main content area that scrolls vertically */
-    .dashboard > div {
-        height: 100%;
-        overflow-y: auto; /* Enables scrolling */
-        scrollbar-width: none; /* Hide scrollbar in Firefox */
-        -ms-overflow-style: none; /* Hide scrollbar in IE/Edge */
+    :global(.content) {
+        flex-grow: 1;
+        overflow: auto;
+        margin-left: -10rem;
+        transition: margin-left 0.3s ease;
+        padding: 20px;
+       
     }
 
-    /* Hide the scrollbar for WebKit browsers (Chrome, Safari, etc.) */
-    .dashboard > :-webkit-scrollbar {
-        display: none;
+    /* Header Styling */
+    :global(.content-header) {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        font-weight: 600;
     }
 
-    .dashboard-content {
-        padding: 40px;
+    /* Table Container */
+    :global(.table-container) {
+        border-radius: 10px;
+        padding: 30px;
+        overflow-x: auto;
         width: 100%;
-        max-width: 50rem;
-        height: 100%; /* Full height for the content area */
-        margin: 100px auto;
-        margin-top: 30px;
-        border-radius: 0.5rem;
+        max-width: 1200px;
+        margin: auto;
+        height: auto;
     }
 
-    input {
+    /* Search Bar */
+    :global(.search-bar) {
+        margin-bottom: 30px;
         width: 100%;
-        padding: 8px;
-        margin-bottom: 10px;
+    }
+
+    :global(.search-input) {
+        width: 100%;
+        padding: 15px;
+        border-radius: 8px;
         border: 1px solid #ccc;
-        border-radius: 4px;
+        font-size: 1rem;
+        box-sizing: border-box;
+        transition: border-color 0.3s ease;
     }
 
+    :global(.search-input:focus) {
+        border-color: #08B8F3;
+        outline: none;
+    }
+
+    /* Pagination */
+    :global(.pagination) {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 20px;
+    }
+
+    :global(.pagination button) {
+        padding: 10px 16px;
+        margin: 0 5px;
+        font-size: 1.1rem;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        background-color: #08B8F3;
+        color: white;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+
+   
+
+    :global(.pagination button:disabled) {
+        background-color: #d6d6d6;
+        cursor: not-allowed;
+    }
+
+    /* Table Styling */
+    :global(table) {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    :global(th), :global(td) {
+        padding: 15px;
+        text-align: left;
+        font-size: 1rem;
+        border-bottom: 1px solid #ddd;
+    }
+
+    :global(th) {
+        background-color: #08B8F3; /* Bright blue for table headers */
+        color: white;
+        font-weight: bold;
+    }
+
+    /* Alternate Row Colors */
+    :global(tr:nth-child(odd)) {
+        background-color: #ffffff;
+    }
+
+    :global(tr:nth-child(even)) {
+        background-color: #f0f8ff; /* Soft blue for alternate rows */
+    }
+
+    /* Hover Effect on Rows */
+    :global(tr:hover) {
+        background-color: #f1f1f1;
+        cursor: pointer;
+    }
+
+    /* Container Styling */
+    :global(.container) {
+        padding: 20px;
+        max-width: 100%;
+        margin: auto;
+        margin-top: 40px;
+        border-radius: 10px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        background-color: #fff;
+    }
+
+    /* Logo Styling */
+    :global(.logo-img) {
+        width: 50px;
+        height: auto;
+        margin-right: 15px;
+    }
+
+    /* Formal Text Styling */
+    :global(.text-sm) {
+        font-size: 0.95rem;
+        color: #333;
+    }
+
+    :global(h1, h2) {
+        font-size: 1.6rem;
+        color: #333;
+        margin: 10px 0;
+        font-weight: 600;
+    }
+
+    /* Text Styling for Clinic Info */
+    :global(.clinic-info) {
+        font-size: 0.95rem;
+        color: #666;
+    }
+
+    :global(.clinic-info p) {
+        margin: 5px 0;
+    }
+
+    /* Footer */
+    :global(.footer) {
+        margin-top: 50px;
+        padding: 10px;
+        text-align: center;
+        font-size: 0.85rem;
+        color: #888;
+    }
 
 
     button {
@@ -245,154 +344,156 @@
    
     
 </style>
-<div class="dashboard" style="display: flex; flex-direction: row;">
+<div class="dashboard">
     <Sidebar {isCollapsed} {toggleSidebar} {logout} />
-    <div class="dashboard-content">
-    <div style="padding: 40px; width: 100%; max-width: 50rem; height: 600px; margin: 100px auto; margin-top: 30px; border-radius: 0.5rem; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); background-color: white; overflow-y: auto;">
 
-    
+    <div class="content" style="margin-left: {isCollapsed ? '-1rem' : '-2.4em'};">
 
-        <!-- Header -->
-        <div class="flex justify-between items-start">
-            <div class="flex items-center">
-                <img src="/images/logo(landing).png" alt="Sun with dental logo" class="w-24 h-18 mr-4" />
-                <div>
-                    <h1 class="font-bold text-lg">AF DOMINIC</h1>
-                    <p class="text-sm">DENTAL CLINIC</p>
-                    <p class="text-sm">#46 12th Street, Corner Gordon Ave New Kalalake</p>
-                    <p class="text-sm">afdominicdentalclinic@gmail.com</p>
-                    <p class="text-sm">0932 984 9554</p>
+  
+        <div class="container">
+            <!-- Header -->
+            <div class="flex justify-between items-start mb-4">
+                <div class="flex items-center">
+                    <img src="/images/logo(landing).png" alt="Sun with dental logo" class="w-24 h-18 mr-4" />
+                    <div>
+                        <h1 class="font-bold text-lg">AF DOMINIC</h1>
+                        <p class="text-sm">DENTAL CLINIC</p>
+                        <p class="text-sm">#46 12th Street, Corner Gordon Ave New Kalalake</p>
+                        <p class="text-sm">afdominicdentalclinic@gmail.com</p>
+                        <p class="text-sm">0932 984 9554</p>
+                    </div>
                 </div>
             </div>
+     
+        <!-- Search Bar -->
+        <div class="search-bar">
+            <input
+                type="text"
+                class="search-input"
+                placeholder="Search"
+                bind:value={searchTerm}
+            />
         </div>
 
-        <!-- Search Bar -->
-        <input type="text" placeholder="Search Patients..." bind:value={searchTerm} on:input={filterPatients} />
-
-        <!-- Patient Table (Filtered) -->
-        {#if searchTerm.trim() !== '' && filteredPatients.length > 0}
-            <h3>All Patients</h3>
-            <Table shadow class="mt-4 border border-gray-300">
-                <thead>
-                  <tr>
-                    <TableHeadCell class="border border-gray-300">Name</TableHeadCell>
-                    <TableHeadCell class="border border-gray-300">Address</TableHeadCell>
-                    <TableHeadCell class="border border-gray-300">Phone</TableHeadCell>
-                    <TableHeadCell class="border border-gray-300">Age</TableHeadCell>
-                    <TableHeadCell class="border border-gray-300">Actions</TableHeadCell>
-                  </tr>
-                </thead>
-                <TableBody>
-                  {#each filteredPatients as patient (patient.id)}
-                    <tr>
-                      <TableBodyCell class="border border-gray-300">{patient.name} {patient.lastName}</TableBodyCell>
-                      <TableBodyCell class="border border-gray-300">{patient.address}</TableBodyCell>
-                      <TableBodyCell class="border border-gray-300">{patient.phone}</TableBodyCell>
-                      <TableBodyCell class="border border-gray-300">{patient.age}</TableBodyCell>
-                      <TableBodyCell class="border border-gray-300">
-                        <button on:click={() => addPrescription(patient.id)} class="bg-blue-500 text-white px-3 py-1 rounded">Add</button>
-                      </TableBodyCell>
-                    </tr>
-                  {/each}
-                </TableBody>
-              </Table>
-              
-       
-
-        {:else if searchTerm.trim() !== ''}
-            <p>No patients found matching the search term.</p>
-        {/if}
-
-        <!-- Prescribed Patients Table -->
-        <h3>Prescribed Patients</h3>
-        {#if prescribedPatients.length === 0}
-            <p>No prescribed patients found.</p>
-        {:else}
-            <Table shadow class="mt-4 border border-gray-300"> <!-- Border added to the table -->
-                <thead>
-                    <tr>
+        <div class="table-container">
+            <!-- Patient Table (Filtered) -->
+            {#if searchTerm.trim() !== '' && filteredPatients.length > 0}
+                <h3>All Patients</h3>
+                <Table shadow style="width: 100%; height: auto;">
+                    <TableHead style="background-color: #08B8F3; color: white;">
+                        <TableHeadCell class="border border-gray-300">Name</TableHeadCell>
+                        <TableHeadCell class="border border-gray-300">Address</TableHeadCell>
+                        <TableHeadCell class="border border-gray-300">Phone</TableHeadCell>
+                        <TableHeadCell class="border border-gray-300">Age</TableHeadCell>
+                        <TableHeadCell class="border border-gray-300">Actions</TableHeadCell>
+                    </TableHead>
+                    <TableBody tableBodyClass="divide-y">
+                        {#each filteredPatients as patient (patient.id)}
+                            <TableBodyRow class="table-body-row">
+                                <TableBodyCell class="border border-gray-300">{patient.name} {patient.lastName}</TableBodyCell>
+                                <TableBodyCell class="border border-gray-300">{patient.address}</TableBodyCell>
+                                <TableBodyCell class="border border-gray-300">{patient.phone}</TableBodyCell>
+                                <TableBodyCell class="border border-gray-300">
+                                    <div style="display: flex; justify-content: center; align-items: center; height: 100%;">{patient.age}</div>
+                                </TableBodyCell>
+                                <TableBodyCell class="border border-gray-300">
+                                    <button on:click={() => addPrescription(patient.id)} class="bg-blue-500 text-white px-3 py-1 rounded">Add</button>
+                                </TableBodyCell>
+                            </TableBodyRow>
+                        {/each}
+                    </TableBody>
+                </Table>
+        
+            {:else if searchTerm.trim() !== ''}
+                <p>No patients found matching the search term.</p>
+            {/if}
+        
+            <!-- Prescribed Patients Table -->
+            <h3>Prescribed Patients</h3>
+            {#if prescribedPatients.length === 0}
+                <p>No prescribed patients found.</p>
+            {:else}
+                <Table shadow style="width: 100%; height: auto;" class="mt-4 border border-gray-300">
+                    <TableHead style="background-color: #08B8F3; color: white;">
                         <TableHeadCell class="border border-gray-300">Name</TableHeadCell>
                         <TableHeadCell class="border border-gray-300">Address</TableHeadCell>
                         <TableHeadCell class="border border-gray-300">Phone</TableHeadCell>
                         <TableHeadCell class="border border-gray-300">Age</TableHeadCell>
                         <TableHeadCell class="border border-gray-300">Prescription</TableHeadCell>
-                    </tr>
-                </thead>
-                <TableBody tableBodyClass="divide-y">
-                    {#each prescribedPatients as patient (patient.id)}
-                        <tr>
-                            <TableBodyCell class="border border-gray-300">{patient.fullName}</TableBodyCell>
-                            <TableBodyCell class="border border-gray-300">{patient.address}</TableBodyCell>
-                            <TableBodyCell class="border border-gray-300">{patient.phone}</TableBodyCell>
-                            <TableBodyCell class="border border-gray-300">{patient.age}</TableBodyCell>
-                            <TableBodyCell class="border border-gray-300">
-                                <button 
-                                    on:click={() => openPrescriptionModal(patient)} 
-                                    class="view-button flex items-center bg-none border-none cursor-pointer text-blue-500 hover:text-blue-700"
-                                >
-                                    <EyeOutline class="w-5 h-5 mr-1" /> <!-- Icon with small margin-right -->
-                                    <span>View</span> <!-- Text -->
-                                </button>
-                            </TableBodyCell>
-                        </tr>
-                    {/each}
-                </TableBody>
-                
-            </Table>
-        {/if}
-        
-        
-
-    </div>
-</div>
-<!-- Modal Content -->
-{#if showModal}
-    <div class="modal fixed inset-0 bg-gray-500 bg-opacity-50 flex justify-center items-center z-50">
-        <div class="modal-content bg-white p-6 rounded-lg shadow-lg w-3/4 md:w-1/2">
-            <h3 class="text-xl font-semibold mb-4">Prescription Details</h3>
-            <p><strong>Patient Name:</strong> {currentPatient.fullName}</p>
-            <p><strong>Address:</strong> {currentPatient.address}</p>
-            <p><strong>Phone:</strong> {currentPatient.phone}</p>
-            <p><strong>Age:</strong> {currentPatient.age}</p>
-
-            <!-- Display all prescriptions in a table -->
-            <Table shadow class="mt-4">
-                <TableHead>
-                    <TableHeadCell>Instructions</TableHeadCell>
-                    <TableHeadCell>Medications</TableHeadCell>
-                    <TableHeadCell>Date Visited</TableHeadCell>
-                    <TableHeadCell>Prescriber</TableHeadCell>
-                    <TableHeadCell>Qty Refills</TableHeadCell>
-                </TableHead>
-                <TableBody tableBodyClass="divide-y">
-                    {#each currentPatient.prescriptions as prescription}
-                    <TableBodyRow>
-                        <TableBodyCell class="text-center">{prescription.instructions}</TableBodyCell>
-                        <TableBodyCell class="text-center">{prescription.medications}</TableBodyCell>
-                        <TableBodyCell class="text-center">{prescription.dateVisited}</TableBodyCell>
-                        <TableBodyCell class="text-center">{prescription.prescriber}</TableBodyCell>
-                        <TableBodyCell class="text-center">{prescription.qtyRefills}</TableBodyCell>
-                    </TableBodyRow>
-                    {/each}
-                </TableBody>
-            </Table>
-
-            <!-- Add New Prescription Button -->
-            <button
-                on:click={() => goto(`/add-prescription1/${currentPatient.id}`)}
-                class="bg-green-500 text-white py-2 px-4 rounded mt-4 hover:bg-green-600"
-            >
-                Add New Prescription
-            </button>
-            
-            <!-- Close Button -->
-            <button 
-                on:click={closeModal} 
-                class="bg-red-500 text-white py-2 px-4 rounded mt-4 hover:bg-red-600"
-            >
-                Close
-            </button>
+                    </TableHead>
+                    <TableBody tableBodyClass="divide-y">
+                        {#each prescribedPatients as patient (patient.id)}
+                            <TableBodyRow class="table-body-row">
+                                <TableBodyCell class="border border-gray-300">{patient.fullName}</TableBodyCell>
+                                <TableBodyCell class="border border-gray-300">{patient.address}</TableBodyCell>
+                                <TableBodyCell class="border border-gray-300">{patient.phone}</TableBodyCell>
+                                <TableBodyCell class="border border-gray-300">{patient.age}</TableBodyCell>
+                                <TableBodyCell class="border border-gray-300">
+                                    <button 
+                                        on:click={() => openPrescriptionModal(patient)} 
+                                        class="view-button flex items-center bg-none border-none cursor-pointer text-blue-500 hover:text-blue-700"
+                                    >
+                                        <EyeOutline class="w-5 h-5 mr-1" />
+                                        <span>View</span>
+                                    </button>
+                                </TableBodyCell>
+                            </TableBodyRow>
+                        {/each}
+                    </TableBody>
+                </Table>
+            {/if}
         </div>
     </div>
-{/if}
 </div>
+        <!-- Modal Content -->
+        {#if showModal}
+            <div class="modal fixed inset-0 bg-gray-500 bg-opacity-50 flex justify-center items-center z-50">
+                <div class="modal-content bg-white p-6 rounded-lg shadow-lg w-3/4 md:w-1/2">
+                    <h3 class="text-xl font-semibold mb-4">Prescription Details</h3>
+                    <p><strong>Patient Name:</strong> {currentPatient.fullName}</p>
+                    <p><strong>Address:</strong> {currentPatient.address}</p>
+                    <p><strong>Phone:</strong> {currentPatient.phone}</p>
+                    <p><strong>Age:</strong> {currentPatient.age}</p>
+        
+                    <!-- Display all prescriptions in a table -->
+                    <Table shadow style="width: 100%; height: auto;">
+                        <TableHead style="background-color: #08B8F3; color: white;">
+                            <TableHeadCell class="border border-gray-300">Instructions</TableHeadCell>
+                            <TableHeadCell class="border border-gray-300">Medications</TableHeadCell>
+                            <TableHeadCell class="border border-gray-300">Date Visited</TableHeadCell>
+                            <TableHeadCell class="border border-gray-300">Prescriber</TableHeadCell>
+                            <TableHeadCell class="border border-gray-300">Qty Refills</TableHeadCell>
+                        </TableHead>
+                        <TableBody tableBodyClass="divide-y">
+                            {#each currentPatient.prescriptions as prescription}
+                                <TableBodyRow class="table-body-row">
+                                    <TableBodyCell class="text-center">{prescription.instructions}</TableBodyCell>
+                                    <TableBodyCell class="text-center">{prescription.medications}</TableBodyCell>
+                                    <TableBodyCell class="text-center">{prescription.dateVisited}</TableBodyCell>
+                                    <TableBodyCell class="text-center">{prescription.prescriber}</TableBodyCell>
+                                    <TableBodyCell class="text-center">{prescription.qtyRefills}</TableBodyCell>
+                                </TableBodyRow>
+                            {/each}
+                        </TableBody>
+                    </Table>
+        
+                    <!-- Add New Prescription Button -->
+                    <button
+                        on:click={() => goto(`/add-prescription1/${currentPatient.id}`)}
+                        class="bg-green-500 text-white py-2 px-4 rounded mt-4 hover:bg-green-600"
+                    >
+                        Add New Prescription
+                    </button>
+        
+                    <!-- Close Button -->
+                    <button 
+                        on:click={closeModal} 
+                        class="bg-red-500 text-white py-2 px-4 rounded mt-4 hover:bg-red-600"
+                    >
+                        Close
+                    </button>
+                </div>
+            </div>
+            
+        {/if}
+    </div>

@@ -111,55 +111,173 @@
 </script>
 
 <style>
-    .dashboard {
+    /* Global Dashboard Layout */
+    :global(.dashboard) {
         display: flex;
         height: 100vh;
         overflow: hidden;
+        font-family: 'Roboto', sans-serif;
     }
 
-    .content {
+    :global(.content) {
         flex-grow: 1;
-        background-color: #f8f8f8;
-        padding: 20px;
         overflow: auto;
         margin-left: -10rem;
         transition: margin-left 0.3s ease;
+        padding: 20px;
+       
     }
 
-    .content-header {
+    /* Header Styling */
+    :global(.content-header) {
         display: flex;
         justify-content: space-between;
         align-items: center;
         margin-bottom: 20px;
+        font-weight: 600;
     }
 
-    .table-container {
-        background-color: white;
-        border-radius: 8px;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        padding: 20px;
+    /* Table Container */
+    :global(.table-container) {
+        border-radius: 10px;
+        padding: 30px;
         overflow-x: auto;
-    }
-
-    .search-bar {
-        margin-bottom: 15px;
-        width: 98.35%;
-    }
-
-    .search-input {
         width: 100%;
-        padding: 8px;
-        border-radius: 5px;
-        border: 1px solid #ddd;
-        font-size: 1rem;
+        max-width: 1200px;
+        margin: auto;
+        height: auto;
     }
 
-    .pagination {
+    /* Search Bar */
+    :global(.search-bar) {
+        margin-bottom: 30px;
+        width: 100%;
+    }
+
+    :global(.search-input) {
+        width: 100%;
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px solid #ccc;
+        font-size: 1rem;
+        box-sizing: border-box;
+        transition: border-color 0.3s ease;
+    }
+
+    :global(.search-input:focus) {
+        border-color: #08B8F3;
+        outline: none;
+    }
+
+    /* Pagination */
+    :global(.pagination) {
         display: flex;
         justify-content: flex-end;
-        margin-top: 10px;
+        margin-top: 20px;
     }
-    
+
+    :global(.pagination button) {
+        padding: 10px 16px;
+        margin: 0 5px;
+        font-size: 1.1rem;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        background-color: #08B8F3;
+        color: white;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+
+   
+
+    :global(.pagination button:disabled) {
+        background-color: #d6d6d6;
+        cursor: not-allowed;
+    }
+
+    /* Table Styling */
+    :global(table) {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    :global(th), :global(td) {
+        padding: 15px;
+        text-align: left;
+        font-size: 1rem;
+        border-bottom: 1px solid #ddd;
+    }
+
+    :global(th) {
+        background-color: #08B8F3; /* Bright blue for table headers */
+        color: white;
+        font-weight: bold;
+    }
+
+    /* Alternate Row Colors */
+    :global(tr:nth-child(odd)) {
+        background-color: #ffffff;
+    }
+
+    :global(tr:nth-child(even)) {
+        background-color: #f0f8ff; /* Soft blue for alternate rows */
+    }
+
+    /* Hover Effect on Rows */
+    :global(tr:hover) {
+        background-color: #f1f1f1;
+        cursor: pointer;
+    }
+
+    /* Container Styling */
+    :global(.container) {
+        padding: 20px;
+        max-width: 100%;
+        margin: auto;
+        margin-top: 40px;
+        border-radius: 10px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        background-color: #fff;
+    }
+
+    /* Logo Styling */
+    :global(.logo-img) {
+        width: 50px;
+        height: auto;
+        margin-right: 15px;
+    }
+
+    /* Formal Text Styling */
+    :global(.text-sm) {
+        font-size: 0.95rem;
+        color: #333;
+    }
+
+    :global(h1, h2) {
+        font-size: 1.6rem;
+        color: #333;
+        margin: 10px 0;
+        font-weight: 600;
+    }
+
+    /* Text Styling for Clinic Info */
+    :global(.clinic-info) {
+        font-size: 0.95rem;
+        color: #666;
+    }
+
+    :global(.clinic-info p) {
+        margin: 5px 0;
+    }
+
+    /* Footer */
+    :global(.footer) {
+        margin-top: 50px;
+        padding: 10px;
+        text-align: center;
+        font-size: 0.85rem;
+        color: #888;
+    }
 </style>
 
 <div class="dashboard">
@@ -171,10 +289,11 @@
         {:else if error}
             <p style="color: red;">{error}</p>
         {:else}
-            <div style="padding: 40px; width: 100%; max-width: 50rem; margin: auto; margin-top: 50px; border-radius: 0.5rem; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); background-color: white;">
+            <div class="container">
+                <!-- Header -->
                 <div class="flex justify-between items-start mb-4">
                     <div class="flex items-center">
-                        <img src="/images/logo(landing).png" alt="Logo" class="w-24 h-18 mr-4" />
+                        <img src="/images/logo(landing).png" alt="Sun with dental logo" class="w-24 h-18 mr-4" />
                         <div>
                             <h1 class="font-bold text-lg">AF DOMINIC</h1>
                             <p class="text-sm">DENTAL CLINIC</p>
@@ -186,7 +305,7 @@
                 </div>
 
                 <div class="content-header">
-                    <h1>Patient List</h1>
+                    <h2>Patient List</h2>
                 </div>
 
                 <div class="search-bar">
@@ -199,8 +318,8 @@
                 </div>
 
                 <div class="table-container">
-                    <Table shadow>
-                        <TableHead>
+                    <Table shadow style="width: 100%; height: auto;">
+                        <TableHead style="background-color: #08B8F3; color: white;">
                             <TableHeadCell>Full Name</TableHeadCell>
                             <TableHeadCell>Patient Address</TableHeadCell>
                             <TableHeadCell>Phone Number</TableHeadCell>
@@ -208,14 +327,13 @@
                         </TableHead>
                         <TableBody tableBodyClass="divide-y">
                             {#each getPaginatedPatients() as patient (patient.id)}
-                            <TableBodyRow>
+                            <TableBodyRow class="table-body-row">
                                 <TableBodyCell>{patient.name} {patient.lastName}</TableBodyCell>
                                 <TableBodyCell>{patient.address}</TableBodyCell>
                                 <TableBodyCell>{patient.phone}</TableBodyCell>
                                 <TableBodyCell>
                                     <div style="display: flex; justify-content: center; align-items: center; height: 100%;">{patient.age}</div>
                                 </TableBodyCell>
-                                
                             </TableBodyRow>
                             {/each}
                         </TableBody>
@@ -224,7 +342,7 @@
                     <div class="pagination">
                         <button on:click={() => goToPage(currentPage - 1)} disabled={currentPage === 1}>&laquo;</button>
                         {#each Array(totalPages()) as _, i}
-                            <button on:click={() => goToPage(i + 1)} class={currentPage === i + 1 ? '' : ''}>{i + 1}</button>
+                            <button on:click={() => goToPage(i + 1)} class={currentPage === i + 1 ? 'active' : ''}>{i + 1}</button>
                         {/each}
                         <button on:click={() => goToPage(currentPage + 1)} disabled={currentPage === totalPages()}>&raquo;</button>
                     </div>

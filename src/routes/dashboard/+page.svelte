@@ -284,6 +284,7 @@ fetchAppointments();
     fetchDashboardData();
 </script>
 <style>
+    /* General Modal Styling */
     .modal {
         position: fixed;
         top: 0;
@@ -293,111 +294,95 @@ fetchAppointments();
         display: flex;
         justify-content: center;
         align-items: center;
-        background: rgba(0, 0, 0, 0.5);
+        background: rgba(0, 0, 0, 0.4);
+        z-index: 1000;
     }
 
     .modal-content {
-        background: white;
-        padding: 20px;
-        border-radius: 8px;
+        background: #fff;
+        padding: 30px;
+        border-radius: 12px;
         max-width: 500px;
         text-align: center;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s ease-out;
+    }
+
+    .modal-content p {
+        font-size: 1.1rem;
+        color: #333;
+        margin-bottom: 20px;
     }
 
     .button {
-        padding: 5px 10px;
+        padding: 10px 20px;
         background-color: #007bff;
         color: white;
         border: none;
         cursor: pointer;
         border-radius: 5px;
+        font-size: 1rem;
+        transition: background-color 0.3s ease, transform 0.2s ease;
+    }
+
+    .button:hover {
+        background-color: #0056b3;
+        transform: translateY(-2px);
     }
 
     .button.decline {
         background-color: #dc3545;
     }
+
+    .button.decline:hover {
+        background-color: #c82333;
+    }
+
+    /* Dashboard Styles */
     .dashboard {
         display: flex;
         height: 100vh;
         overflow: hidden;
+        background-color: #f8f9fa;
     }
 
     .content {
         flex-grow: 1;
         padding: 20px;
         overflow: auto;
+        background-color: #fff;
+        margin-left: -85px; /* assuming Sidebar width is 250px */
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     }
-
-    .appointment-list {
-        margin-top: 20px;
-    }
-
-    .appointment-item {
-        background: #fff;
-        border-radius: 8px;
-        padding: 10px;
-        margin: 10px 0;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-    }
-
-    .appointment-item .actions {
-        display: flex;
-        gap: 10px;
-    }
-
-    .button {
-        padding: 5px 10px;
-        background-color: #007bff;
-        color: white;
-        border: none;
-        cursor: pointer;
-        border-radius: 5px;
-    }
-
-    .button.decline {
-        background-color: #dc3545;
-    }
-
-   .dashboard {
-        display: flex;
-        height: 100vh;
-        overflow: hidden;
-    }
-
-    .content {
-        flex-grow: 1;
-     
-        padding: 20px;
-        overflow: auto;
-    }
-
-    
 
     .cards {
         display: flex;
         gap: 15px;
         flex-wrap: wrap;
+        margin-bottom: 20px;
     }
 
     .card {
-        background: white;
-        border-radius: 8px;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
         padding: 20px;
         flex: 1 1 300px;
         display: flex;
         align-items: center;
         justify-content: space-between;
         cursor: pointer;
+        transition: transform 0.2s ease-in-out;
     }
 
-    .cards :hover {
+    .card:hover {
         transform: scale(1.05); /* Slightly enlarge the item on hover */
     }
 
     .card .icon {
         font-size: 2rem;
-        color: black !important;
+        color: #007bff;
     }
 
     .card .text {
@@ -406,45 +391,68 @@ fetchAppointments();
 
     .card .text h3 {
         margin: 0;
-        font-size: 1.2rem;
+        font-size: 1.5rem;
+        color: #333;
     }
 
     .card .text p {
         margin: 0;
-        color: #555;
+        color: #777;
     }
 
     .appointment-list {
-        margin-top: 20px;
+        margin-top: 30px;
     }
 
     .appointment-item {
         background: #fff;
         border-radius: 8px;
-        padding: 10px;
+        padding: 15px;
         margin: 10px 0;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s ease-out;
+    }
+
+    .appointment-item:hover {
+        transform: translateY(-5px);
+    }
+
+    .appointment-item p {
+        margin: 5px 0;
+        font-size: 1.1rem;
+        color: #333;
     }
 
     .appointment-item .actions {
         display: flex;
-        gap: 10px;
+        gap: 15px;
     }
 
-    .button {
-        padding: 5px 10px;
-        background-color: #007bff;
-        color: white;
-        border: none;
-        cursor: pointer;
+    .appointment-item .actions button {
+        font-size: 1rem;
+        padding: 8px 15px;
         border-radius: 5px;
+        transition: background-color 0.3s ease;
     }
 
-    .button.decline {
-        background-color: #dc3545;
+    .appointment-item .actions button:hover {
+        background-color: #f1f1f1;
     }
+
+    .appointment-item .actions button:focus {
+        outline: none;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Text Color for Appointment Status */
+    .text-green-600 { color: #28a745; }
+    .text-blue-600 { color: #007bff; }
+    .text-red-600 { color: #dc3545; }
+    .text-yellow-600 { color: #ffc107; }
+    .text-gray-600 { color: #6c757d; }
 
 </style>
+
 <div class="dashboard">
     <Sidebar {isCollapsed} {toggleSidebar} {logout} />
     <div class="content">
