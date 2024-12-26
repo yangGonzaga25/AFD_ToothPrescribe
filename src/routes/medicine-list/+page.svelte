@@ -327,22 +327,9 @@ textarea:focus {
                     <h2 class="text-lg font-semibold">{medicine.name}</h2>
                     <p class="text-gray-600 mb-4">{medicine.description}</p>
                     <div class="controls">
-                        <button
-                            class="bg-gray-200 text-gray-700 px-2 py-1 rounded"
-                            aria-label="Decrease quantity"
-                            on:click={() => updateMedicineQuantity(medicine, false)}
-                            disabled={medicine.quantity <= 0}
-                        >
-                            <MinusOutline class="w-5 h-5" />
-                        </button>
+              
                         <span>{medicine.quantity}</span>
-                        <button
-                            class="bg-gray-200 text-gray-700 px-2 py-1 rounded"
-                            aria-label="Increase quantity"
-                            on:click={() => updateMedicineQuantity(medicine, true)}
-                        >
-                            <PlusOutline class="w-5 h-5" />
-                        </button>
+                     
                     </div>
                 </div>
             {/each}
