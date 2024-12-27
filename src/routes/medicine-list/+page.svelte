@@ -1,10 +1,11 @@
 <script lang="ts">
   import Sidebar from '../sidenav/+page.svelte';
   import { onMount } from "svelte";
-  import { getFirestore, doc, setDoc, collection, getDocs, updateDoc } from "firebase/firestore";
+  import { getFirestore, doc, setDoc, collection, getDocs, updateDoc, deleteDoc, getDoc } from "firebase/firestore";
   import { firebaseConfig } from "$lib/firebaseConfig";
   import { initializeApp, getApps, getApp } from "firebase/app";
   import { MinusOutline, PlusOutline } from 'flowbite-svelte-icons';
+  import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
   let isCollapsed = false;
 
@@ -17,6 +18,7 @@
   }
 
   type Medicine = {
+    id: string;
     name: string;
     quantity: number;
     description: string;
@@ -30,13 +32,33 @@
   let showPopup = false;
   let newMedicine = { name: "", quantity: 0, description: "", imageUrl: "" };
   let imageFile: File | null = null;
+  let editPopup = false;
+  let medicineToEdit: Medicine | null = null;
 
   // Fetch medicines from Firestore
+  // async function fetchMedicines() {
+  //   const medicinesCollection = collection(firestore, "medicines");
+  //   const medicineSnapshot = await getDocs(medicinesCollection);
+  //   medicines = medicineSnapshot.docs.map(doc => doc.data() as Medicine);
+  // }
   async function fetchMedicines() {
-    const medicinesCollection = collection(firestore, "medicines");
-    const medicineSnapshot = await getDocs(medicinesCollection);
-    medicines = medicineSnapshot.docs.map(doc => doc.data() as Medicine);
-  }
+  const medicinesCollection = collection(firestore, "medicines");
+  const medicineSnapshot = await getDocs(medicinesCollection);
+
+  medicines = medicineSnapshot.docs
+    .map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,  // Store Firestore document ID as the 'id' property
+        name: data.name || "", 
+        quantity: data.quantity ?? 0, 
+        description: data.description || "", 
+        imageUrl: data.imageUrl || "",
+      } as Medicine;
+    })
+    .filter((medicine) => medicine.name && medicine.description); // Filter out invalid medicines
+}
+
 
   // On mount, fetch the medicines
   onMount(fetchMedicines);
@@ -45,17 +67,39 @@
     showPopup = !showPopup;
   }
 
+  // function handleImageUpload(event: Event) {
+  //   const input = event.target as HTMLInputElement;
+  //   if (input && input.files && input.files[0]) {
+  //     imageFile = input.files[0];
+  //     const reader = new FileReader();
+  //     reader.onloadend = () => {
+  //       newMedicine.imageUrl = reader.result as string;
+  //     };
+  //     reader.readAsDataURL(imageFile);
+  //   }
+  // }
   function handleImageUpload(event: Event) {
-    const input = event.target as HTMLInputElement;
-    if (input && input.files && input.files[0]) {
-      imageFile = input.files[0];
-      const reader = new FileReader();
-      reader.onloadend = () => {
+  const input = event.target as HTMLInputElement;
+  if (input && input.files && input.files[0]) {
+    const file = input.files[0];
+    const reader = new FileReader();
+
+    reader.onloadend = () => {
+      // If editing, update the image for the medicineToEdit
+      if (medicineToEdit) {
+        medicineToEdit.imageUrl = reader.result as string;
+      }
+
+      // If adding, update the image for the newMedicine
+      if (newMedicine) {
         newMedicine.imageUrl = reader.result as string;
-      };
-      reader.readAsDataURL(imageFile);
-    }
+      }
+    };
+
+    reader.readAsDataURL(file);
   }
+}
+
 
   async function addMedicine() {
     if (newMedicine.name && newMedicine.quantity > 0 && newMedicine.description) {
@@ -103,6 +147,99 @@
       console.error("Error updating quantity: ", error);
     }
   }
+
+// Open the edit popup and set the medicine to edit
+function openEditPopup(medicine: Medicine) {
+  medicineToEdit = { ...medicine }; // Directly clone the medicine object for editing
+  editPopup = true;
+}
+
+// Close the edit popup
+function closeEditPopup() {
+  editPopup = false;
+  medicineToEdit = null;
+}
+
+async function saveEditedMedicine() {
+  if (!medicineToEdit) {
+    console.error("No medicine selected for editing.");
+    return;
+  }
+
+  if (!medicineToEdit.name || !medicineToEdit.description || medicineToEdit.quantity === undefined) {
+    alert("Please fill in all required fields.");
+    return;
+  }
+
+  try {
+    // Log the whole medicineToEdit to check its values before updating
+    console.log("Updating medicine: ", medicineToEdit);
+
+    const medicineRef = doc(firestore, "medicines", medicineToEdit?.id); // Use optional chaining on id
+
+    // Check if the document exists before attempting to update it
+    const docSnapshot = await getDoc(medicineRef);
+    if (!docSnapshot.exists()) {
+      console.error(`No document found for ${medicineToEdit?.name}`); // Optional chaining on name
+      alert("The medicine record you're trying to update does not exist.");
+      return;
+    }
+
+    // Proceed with updating the Firestore document
+    await updateDoc(medicineRef, {
+      name: medicineToEdit?.name,
+      quantity: medicineToEdit?.quantity,
+      description: medicineToEdit?.description,
+      imageUrl: medicineToEdit?.imageUrl || "",
+    });
+
+     // Log before calling closeEditPopup
+     console.log(`Successfully updated medicine: ${medicineToEdit.name}`);
+
+    // Update the local state immediately
+    medicines = medicines.map(m => 
+      m.id === medicineToEdit?.id ? { ...m, ...medicineToEdit } : m
+    );
+
+    // Close the edit popup
+    closeEditPopup();
+  } catch (error) {
+    console.error("Error saving edited medicine:", error);
+    alert("Failed to save changes. Please try again.");
+  }
+}
+
+
+// // Delete a medicine
+// async function deleteMedicine(medicine: Medicine) {
+//   const medicineRef = doc(firestore, "medicines", medicine.name);
+//   await deleteDoc(medicineRef);
+
+//   // Update the local state
+//   medicines = medicines.filter(m => m.name !== medicine.name);
+// }
+// Delete a medicine
+async function deleteMedicine(medicine: Medicine) {
+  const confirmDelete = window.confirm(`Are you sure you want to delete the medicine: ${medicine.name}?`);
+  
+  if (!confirmDelete) {
+    return; // If the user cancels, stop the deletion process
+  }
+
+  try {
+    const medicineRef = doc(firestore, "medicines", medicine.name);
+    await deleteDoc(medicineRef);
+
+    // Update the local state to remove the deleted medicine
+    medicines = medicines.filter(m => m.name !== medicine.name);
+
+    alert(`${medicine.name} has been deleted successfully.`);
+  } catch (error) {
+    console.error("Error deleting medicine: ", error);
+    alert("Failed to delete the medicine. Please try again.");
+  }
+}
+
 </script>
 
 
@@ -304,6 +441,34 @@ textarea:focus {
             width: 600px; /* Wider popup on larger screens */
         }
     }
+    .edit-button {
+  background-color: #4a90e2;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.edit-button:hover {
+  background-color: #357ABD;
+}
+
+.delete-button {
+  background-color: #f44336;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.delete-button:hover {
+  background-color: #c23628;
+}
+
 </style>
 
 <div class="dashboard">
@@ -327,27 +492,66 @@ textarea:focus {
                     <h2 class="text-lg font-semibold">{medicine.name}</h2>
                     <p class="text-gray-600 mb-4">{medicine.description}</p>
                     <div class="controls">
-                        <button
-                            class="bg-gray-200 text-gray-700 px-2 py-1 rounded"
-                            aria-label="Decrease quantity"
-                            on:click={() => updateMedicineQuantity(medicine, false)}
-                            disabled={medicine.quantity <= 0}
-                        >
-                            <MinusOutline class="w-5 h-5" />
-                        </button>
+                      <button class="edit-button" on:click={() => openEditPopup(medicine)}>Edit</button>
+                      <button class="delete-button" on:click={() => deleteMedicine(medicine)}>Delete</button>
                         <span>{medicine.quantity}</span>
-                        <button
-                            class="bg-gray-200 text-gray-700 px-2 py-1 rounded"
-                            aria-label="Increase quantity"
-                            on:click={() => updateMedicineQuantity(medicine, true)}
-                        >
-                            <PlusOutline class="w-5 h-5" />
-                        </button>
+                     
                     </div>
                 </div>
             {/each}
         </div>
 
+        {#if editPopup && medicineToEdit}
+        <div class="popup">
+          <div class="popup-content">
+            <h2 class="text-xl font-semibold mb-4">Edit Medicine</h2>
+            <label for="edit-name" class="block text-gray-700 mb-2">Medicine Name</label>
+            <input
+            id="edit-name"
+            type="text"
+            bind:value={medicineToEdit.name}
+            class="border border-gray-300 rounded px-3 py-2 mb-4 w-full"
+            required
+          />
+          
+          <input
+            id="edit-quantity"
+            type="number"
+            bind:value={medicineToEdit.quantity}
+            class="border border-gray-300 rounded px-3 py-2 mb-4 w-full"
+            required
+          />
+          
+          <textarea
+            id="edit-description"
+            bind:value={medicineToEdit.description}
+            class="border border-gray-300 rounded px-3 py-2 mb-4 w-full"
+            rows="4"
+            required
+          ></textarea>
+          
+            <label for="edit-image" class="block text-gray-700 mb-2">Upload Image</label>
+            <input
+              id="edit-image"
+              type="file"
+              accept="image/*"
+              on:change={handleImageUpload}
+              class="border border-gray-300 rounded px-3 py-2 mb-4 w-full"
+            />
+            {#if medicineToEdit.imageUrl}
+              <img src={medicineToEdit.imageUrl} alt="Preview" class="image-preview" />
+            {/if}
+            <div class="flex justify-between">
+              <button class="cancel-button" on:click={closeEditPopup}>Cancel</button>
+              <button class="confirm-button" on:click={saveEditedMedicine} disabled={!medicineToEdit}>
+                Save Changes
+              </button>              
+              <!-- <button class="confirm-button" on:click={saveEditedMedicine}>Save Changes</button> -->
+            </div>
+          </div>
+        </div>
+      {/if}
+      
 
         {#if showPopup}
             <div class="popup">
