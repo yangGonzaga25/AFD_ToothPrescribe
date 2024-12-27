@@ -195,6 +195,7 @@ async function saveEditedMedicine() {
 
      // Log before calling closeEditPopup
      console.log(`Successfully updated medicine: ${medicineToEdit.name}`);
+     alert("Successfully updated medicine.");
 
     // Update the local state immediately
     medicines = medicines.map(m => 
