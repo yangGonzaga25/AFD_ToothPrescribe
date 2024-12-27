@@ -228,11 +228,18 @@ async function deleteMedicine(medicine: Medicine) {
   }
 
   try {
-    const medicineRef = doc(firestore, "medicines", medicine.name);
+    // Use the document ID (`medicine.id`) for deletion
+    if (!medicine.id) {
+      console.error("No ID found for the medicine.");
+      alert("Failed to delete the medicine. No ID was found.");
+      return;
+    }
+
+    const medicineRef = doc(firestore, "medicines", medicine.id);
     await deleteDoc(medicineRef);
 
     // Update the local state to remove the deleted medicine
-    medicines = medicines.filter(m => m.name !== medicine.name);
+    medicines = medicines.filter(m => m.id !== medicine.id);
 
     alert(`${medicine.name} has been deleted successfully.`);
   } catch (error) {
@@ -240,6 +247,7 @@ async function deleteMedicine(medicine: Medicine) {
     alert("Failed to delete the medicine. Please try again.");
   }
 }
+
 
 </script>
 
