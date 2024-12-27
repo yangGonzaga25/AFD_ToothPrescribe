@@ -5,7 +5,6 @@
   import { firebaseConfig } from "$lib/firebaseConfig";
   import { initializeApp, getApps, getApp } from "firebase/app";
   import { MinusOutline, PlusOutline } from 'flowbite-svelte-icons';
-  import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
   let isCollapsed = false;
 
@@ -35,12 +34,6 @@
   let editPopup = false;
   let medicineToEdit: Medicine | null = null;
 
-  // Fetch medicines from Firestore
-  // async function fetchMedicines() {
-  //   const medicinesCollection = collection(firestore, "medicines");
-  //   const medicineSnapshot = await getDocs(medicinesCollection);
-  //   medicines = medicineSnapshot.docs.map(doc => doc.data() as Medicine);
-  // }
   async function fetchMedicines() {
   const medicinesCollection = collection(firestore, "medicines");
   const medicineSnapshot = await getDocs(medicinesCollection);
@@ -67,17 +60,7 @@
     showPopup = !showPopup;
   }
 
-  // function handleImageUpload(event: Event) {
-  //   const input = event.target as HTMLInputElement;
-  //   if (input && input.files && input.files[0]) {
-  //     imageFile = input.files[0];
-  //     const reader = new FileReader();
-  //     reader.onloadend = () => {
-  //       newMedicine.imageUrl = reader.result as string;
-  //     };
-  //     reader.readAsDataURL(imageFile);
-  //   }
-  // }
+
   function handleImageUpload(event: Event) {
   const input = event.target as HTMLInputElement;
   if (input && input.files && input.files[0]) {
@@ -210,15 +193,6 @@ async function saveEditedMedicine() {
   }
 }
 
-
-// // Delete a medicine
-// async function deleteMedicine(medicine: Medicine) {
-//   const medicineRef = doc(firestore, "medicines", medicine.name);
-//   await deleteDoc(medicineRef);
-
-//   // Update the local state
-//   medicines = medicines.filter(m => m.name !== medicine.name);
-// }
 // Delete a medicine
 async function deleteMedicine(medicine: Medicine) {
   const confirmDelete = window.confirm(`Are you sure you want to delete the medicine: ${medicine.name}?`);
@@ -450,21 +424,52 @@ textarea:focus {
             width: 600px; /* Wider popup on larger screens */
         }
     }
-    .edit-button {
-  background-color: #4a90e2;
-  color: white;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
+    .edit-popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  width: 800px;
+  max-width: 90%;
+  z-index: 1050; /* Ensures it appears above other content */
 }
 
-.edit-button:hover {
-  background-color: #357ABD;
+.edit-popup-content {
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
 }
 
-.delete-button {
+.landscape-layout {
+  align-items: flex-start;
+}
+
+.edit-popup .form-left {
+  flex: 2;
+}
+
+.edit-popup .form-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.edit-popup .image-preview {
+  width: 100%;
+  height: auto;
+  max-height: 200px;
+  object-fit: cover;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  margin-top: 10px;
+}
+
+.edit-popup .cancel-button {
   background-color: #f44336;
   color: white;
   border: none;
@@ -474,8 +479,22 @@ textarea:focus {
   transition: background-color 0.3s ease;
 }
 
-.delete-button:hover {
+.edit-popup .cancel-button:hover {
   background-color: #c23628;
+}
+
+.edit-popup .confirm-button {
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.edit-popup .confirm-button:hover {
+  background-color: #388e3c;
 }
 
 </style>
@@ -501,65 +520,73 @@ textarea:focus {
                     <h2 class="text-lg font-semibold">{medicine.name}</h2>
                     <p class="text-gray-600 mb-4">{medicine.description}</p>
                     <div class="controls">
-                      <button class="edit-button" on:click={() => openEditPopup(medicine)}>Edit</button>
-                      <button class="delete-button" on:click={() => deleteMedicine(medicine)}>Delete</button>
                         <span>{medicine.quantity}</span>
-                     
+                        <button class="edit-button" on:click={() => openEditPopup(medicine)}>Edit</button>
+                        <button class="delete-button" on:click={() => deleteMedicine(medicine)}>Delete</button>
                     </div>
                 </div>
             {/each}
         </div>
 
         {#if editPopup && medicineToEdit}
-        <div class="popup">
-          <div class="popup-content">
-            <h2 class="text-xl font-semibold mb-4">Edit Medicine</h2>
-            <label for="edit-name" class="block text-gray-700 mb-2">Medicine Name</label>
-            <input
-            id="edit-name"
-            type="text"
-            bind:value={medicineToEdit.name}
-            class="border border-gray-300 rounded px-3 py-2 mb-4 w-full"
-            required
-          />
-          
-          <input
-            id="edit-quantity"
-            type="number"
-            bind:value={medicineToEdit.quantity}
-            class="border border-gray-300 rounded px-3 py-2 mb-4 w-full"
-            required
-          />
-          
-          <textarea
-            id="edit-description"
-            bind:value={medicineToEdit.description}
-            class="border border-gray-300 rounded px-3 py-2 mb-4 w-full"
-            rows="4"
-            required
-          ></textarea>
-          
-            <label for="edit-image" class="block text-gray-700 mb-2">Upload Image</label>
-            <input
-              id="edit-image"
-              type="file"
-              accept="image/*"
-              on:change={handleImageUpload}
-              class="border border-gray-300 rounded px-3 py-2 mb-4 w-full"
-            />
-            {#if medicineToEdit.imageUrl}
-              <img src={medicineToEdit.imageUrl} alt="Preview" class="image-preview" />
-            {/if}
-            <div class="flex justify-between">
-              <button class="cancel-button" on:click={closeEditPopup}>Cancel</button>
-              <button class="confirm-button" on:click={saveEditedMedicine} disabled={!medicineToEdit}>
-                Save Changes
-              </button>              
-              <!-- <button class="confirm-button" on:click={saveEditedMedicine}>Save Changes</button> -->
+        <div class="edit-popup">
+          <div class="edit-popup-content landscape-layout">
+            <div class="form-left">
+              <h2 class="text-xl font-semibold mb-4">Edit Medicine</h2>
+      
+              <label for="edit-name" class="block text-gray-700 mb-2">Medicine Name</label>
+              <input
+                id="edit-name"
+                type="text"
+                bind:value={medicineToEdit.name}
+                class="border border-gray-300 rounded px-3 py-2 mb-4 w-full"
+                required
+              />
+      
+              <label for="edit-quantity" class="block text-gray-700 mb-2">Quantity</label>
+              <input
+                id="edit-quantity"
+                type="number"
+                bind:value={medicineToEdit.quantity}
+                class="border border-gray-300 rounded px-3 py-2 mb-4 w-full"
+                required
+              />
+      
+              <label for="edit-description" class="block text-gray-700 mb-2">Description</label>
+              <textarea
+                id="edit-description"
+                bind:value={medicineToEdit.description}
+                class="border border-gray-300 rounded px-3 py-2 mb-4 w-full"
+                rows="4"
+                required
+              ></textarea>
+      
+              <div class="flex justify-between">
+                <button class="cancel-button" on:click={closeEditPopup}>Cancel</button>
+                <button class="confirm-button" on:click={saveEditedMedicine} disabled={!medicineToEdit}>
+                  Save Changes
+                </button>
+              </div>
+            </div>
+      
+            <div class="form-right">
+              <label for="edit-image" class="block text-gray-700 mt-10">Upload Image</label>
+              <input
+                id="edit-image"
+                type="file"
+                accept="image/*"
+                on:change={handleImageUpload}
+                class="border border-gray-300 rounded px-3 py-2 mb-4 w-full"
+              />
+              {#if medicineToEdit.imageUrl}
+                <img src={medicineToEdit.imageUrl} alt="Preview" class="image-preview" />
+              {/if}
             </div>
           </div>
         </div>
       {/if}
+      
+
       
 
         {#if showPopup}
