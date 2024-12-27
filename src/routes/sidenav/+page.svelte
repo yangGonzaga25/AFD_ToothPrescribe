@@ -195,19 +195,26 @@
         <!-- Sidebar Menu -->
         <ul class="sidebar-menu">
             <li>
-                <a href="/dashboard">
+                <a href="./dashboard">
                     <img class="icon" src="/images/icon-dashboard.png" alt="Dashboard Icon" />
                     <span class="text">Dashboard</span>
                 </a>
             </li>
             <li>
-                <a href="/patient-list">
+              
+                <a href="/appointment">
+                    <img class="icon" src="/images/icon-patient.png" alt="Patient Icon" />
+                    <span class="text">Appointment</span>
+                </a>
+            </li>
+            <li>
+                <a href="./patient-list">
                     <img class="icon" src="/images/icon-patient.png" alt="Patient Icon" />
                     <span class="text">Patient List</span>
                 </a>
             </li>
             <li>
-                <a href="/prescription">
+                <a href="./prescription">
                     <img class="icon" src="/images/icon-prescriptions.png" alt="Prescriptions Icon" />
                     <span class="text">Prescriptions</span>
                 </a>
