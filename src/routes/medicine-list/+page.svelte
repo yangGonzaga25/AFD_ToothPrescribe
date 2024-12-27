@@ -5,6 +5,7 @@
   import { firebaseConfig } from "$lib/firebaseConfig";
   import { initializeApp, getApps, getApp } from "firebase/app";
   import { MinusOutline, PlusOutline } from 'flowbite-svelte-icons';
+  import Swal from "sweetalert2";
 
   let isCollapsed = false;
 
@@ -84,31 +85,82 @@
 }
 
 
-  async function addMedicine() {
-    if (newMedicine.name && newMedicine.quantity > 0 && newMedicine.description) {
+
+async function addMedicine() {
+  if (newMedicine.name && newMedicine.quantity > 0 && newMedicine.description) {
+    try {
+      // Show loading SweetAlert while processing
+      Swal.fire({
+        title: "Adding Medicine...",
+        text: "Please wait while we save the details.",
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        },
+      });
+
       if (imageFile) {
         const reader = new FileReader();
         reader.readAsDataURL(imageFile);
         reader.onloadend = async () => {
           newMedicine.imageUrl = reader.result as string;
+
+          // Save to Firestore
+          const medicineName = newMedicine.name; // Save the name before resetting
           await saveMedicineToFirestore();
+
+          // Close loading SweetAlert and show success message
+          Swal.close();
+          showSuccessAlert(medicineName);
         };
       } else {
+        // Save to Firestore without image
+        const medicineName = newMedicine.name; // Save the name before resetting
         await saveMedicineToFirestore();
+
+        // Close loading SweetAlert and show success message
+        Swal.close();
+        showSuccessAlert(medicineName);
       }
+    } catch (error) {
+      console.error("Error adding medicine: ", error);
+
+      // Show error SweetAlert
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "Failed to add the medicine. Please try again.",
+      });
     }
+  } else {
+    // Show validation error alert
+    Swal.fire({
+      icon: "warning",
+      title: "Invalid Input",
+      text: "Please fill in all the required fields and ensure the quantity is greater than zero.",
+    });
   }
+}
 
-  async function saveMedicineToFirestore() {
-    const medicineRef = doc(firestore, "medicines", newMedicine.name);
-    await setDoc(medicineRef, newMedicine);
+// Function to display success SweetAlert
+function showSuccessAlert(medicineName: string) {
+  Swal.fire({
+    icon: "success",
+    title: "Medicine Added",
+    text: `${medicineName} has been successfully added to the inventory.`,
+  });
+}
 
-    // Refetch medicines to ensure the list is updated
-    await fetchMedicines();
-    newMedicine = { name: "", quantity: 0, description: "", imageUrl: "" };
-    imageFile = null;
-    togglePopup();
-  }
+async function saveMedicineToFirestore() {
+  const medicineRef = doc(firestore, "medicines", newMedicine.name);
+  await setDoc(medicineRef, newMedicine);
+
+  // Refetch medicines to ensure the list is updated
+  await fetchMedicines();
+  newMedicine = { name: "", quantity: 0, description: "", imageUrl: "" };
+  imageFile = null;
+  togglePopup();
+}
 
   async function updateMedicineQuantity(medicine: Medicine, increment: boolean) {
     const medicineRef = doc(firestore, "medicines", medicine.name);
@@ -145,26 +197,45 @@ function closeEditPopup() {
 
 async function saveEditedMedicine() {
   if (!medicineToEdit) {
-    console.error("No medicine selected for editing.");
+    Swal.fire({
+      icon: "error",
+      title: "Error",
+      text: "No medicine selected for editing.",
+    });
     return;
   }
 
   if (!medicineToEdit.name || !medicineToEdit.description || medicineToEdit.quantity === undefined) {
-    alert("Please fill in all required fields.");
+    Swal.fire({
+      icon: "warning",
+      title: "Invalid Input",
+      text: "Please fill in all required fields.",
+    });
     return;
   }
 
   try {
-    // Log the whole medicineToEdit to check its values before updating
-    console.log("Updating medicine: ", medicineToEdit);
+    // Show loading SweetAlert while processing
+    Swal.fire({
+      title: "Saving Changes...",
+      text: "Please wait while we update the medicine details.",
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      },
+    });
 
     const medicineRef = doc(firestore, "medicines", medicineToEdit?.id); // Use optional chaining on id
 
     // Check if the document exists before attempting to update it
     const docSnapshot = await getDoc(medicineRef);
     if (!docSnapshot.exists()) {
-      console.error(`No document found for ${medicineToEdit?.name}`); // Optional chaining on name
-      alert("The medicine record you're trying to update does not exist.");
+      Swal.close(); // Close the loading SweetAlert
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: `The medicine record for ${medicineToEdit?.name || "this medicine"} does not exist.`,
+      });
       return;
     }
 
@@ -176,49 +247,85 @@ async function saveEditedMedicine() {
       imageUrl: medicineToEdit?.imageUrl || "",
     });
 
-     // Log before calling closeEditPopup
-     console.log(`Successfully updated medicine: ${medicineToEdit.name}`);
-     alert("Successfully updated medicine.");
-
     // Update the local state immediately
-    medicines = medicines.map(m => 
+    medicines = medicines.map(m =>
       m.id === medicineToEdit?.id ? { ...m, ...medicineToEdit } : m
     );
+
+    // Close the loading SweetAlert and show success message
+    Swal.close();
+    Swal.fire({
+      icon: "success",
+      title: "Medicine Updated",
+      text: `${medicineToEdit.name} has been successfully updated.`,
+    });
 
     // Close the edit popup
     closeEditPopup();
   } catch (error) {
     console.error("Error saving edited medicine:", error);
-    alert("Failed to save changes. Please try again.");
+
+    // Close the loading SweetAlert and show error message
+    Swal.close();
+    Swal.fire({
+      icon: "error",
+      title: "Error",
+      text: "Failed to save changes. Please try again.",
+    });
   }
 }
 
+
 // Delete a medicine
 async function deleteMedicine(medicine: Medicine) {
-  const confirmDelete = window.confirm(`Are you sure you want to delete the medicine: ${medicine.name}?`);
-  
-  if (!confirmDelete) {
-    return; // If the user cancels, stop the deletion process
+  if (!medicine.id) {
+    Swal.fire({
+      icon: "error",
+      title: "Error",
+      text: "Failed to delete the medicine. No ID was found.",
+    });
+    return;
   }
 
   try {
-    // Use the document ID (`medicine.id`) for deletion
-    if (!medicine.id) {
-      console.error("No ID found for the medicine.");
-      alert("Failed to delete the medicine. No ID was found.");
-      return;
+    // Show confirmation dialog
+    const result = await Swal.fire({
+      title: `Are you sure?`,
+      text: `Do you want to delete the medicine: ${medicine.name}?`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, delete it!",
+      cancelButtonText: "Cancel",
+    });
+
+    if (!result.isConfirmed) {
+      return; // If the user cancels, stop the deletion process
     }
 
+    // Use the document ID (`medicine.id`) for deletion
     const medicineRef = doc(firestore, "medicines", medicine.id);
     await deleteDoc(medicineRef);
 
     // Update the local state to remove the deleted medicine
-    medicines = medicines.filter(m => m.id !== medicine.id);
+    medicines = medicines.filter((m) => m.id !== medicine.id);
 
-    alert(`${medicine.name} has been deleted successfully.`);
+    // Show success alert
+    Swal.fire({
+      icon: "success",
+      title: "Deleted!",
+      text: `${medicine.name} has been deleted successfully.`,
+    });
   } catch (error) {
     console.error("Error deleting medicine: ", error);
-    alert("Failed to delete the medicine. Please try again.");
+
+    // Show error alert
+    Swal.fire({
+      icon: "error",
+      title: "Error",
+      text: "Failed to delete the medicine. Please try again.",
+    });
   }
 }
 
