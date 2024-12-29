@@ -7,6 +7,7 @@
     import { getFirestore, collection, getDocs } from 'firebase/firestore'; // Firebase Firestore functions
     import { goto } from '$app/navigation'; // To programmatically navigate
     import { EyeOutline } from 'flowbite-svelte-icons'; // Eye icon for viewing prescriptions
+    import Swal from 'sweetalert2';
 
     // Initialize Firebase
     const app = initializeApp(firebaseConfig);
@@ -114,7 +115,12 @@
         // Check if the patient is already prescribed
         const isPrescribed = prescribedPatients.some(patient => patient.id === id);
         if (isPrescribed) {
-            alert("This patient has already been prescribed.");
+            Swal.fire({
+            icon: 'warning',
+            title: 'Duplicate Prescription',
+            text: 'This patient has already been prescribed.',
+            confirmButtonText: 'Okay'
+        });
         } else {
             if (id) {
                 goto(`/add-prescription1/${id}`);
