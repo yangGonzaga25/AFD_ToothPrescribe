@@ -5,7 +5,6 @@
   import { initializeApp } from 'firebase/app';
   import { getFirestore, doc, deleteDoc, getDoc, setDoc, collection, getDocs } from 'firebase/firestore';
   import { Label, Input, Textarea, Button, Toast } from 'flowbite-svelte';
-  import Swal from 'sweetalert2';
 
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
@@ -78,59 +77,28 @@
 
   async function deletePrescription(prescriptionId: string) {
   try {
-    // Confirmation dialog before deletion
-    const result = await Swal.fire({
-      title: 'Are you sure?',
-      text: 'This action cannot be undone.',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: 'Yes, delete it!',
-      cancelButtonText: 'Cancel'
-    });
-
-    if (result.isConfirmed) {
-      const prescriptionRef = doc(db, "prescriptions", prescriptionId);
-      await deleteDoc(prescriptionRef);
-
-      Swal.fire({
-        icon: 'success',
-        title: 'Deleted!',
-        text: 'Prescription deleted successfully.',
-        confirmButtonText: 'Okay'
-      });
-
-      fetchPrescriptions(); // Refresh the prescription list after deletion
-    }
+    const prescriptionRef = doc(db, "prescriptions", prescriptionId);
+    await deleteDoc(prescriptionRef);
+    toastMessage = 'Prescription deleted successfully!';
+    toastType = 'success';
+    fetchPrescriptions(); // Refresh the prescription list after deletion
   } catch (error) {
     console.error('Error deleting prescription: ', error);
-
-    Swal.fire({
-      icon: 'error',
-      title: 'Error',
-      text: 'Error deleting prescription. Please try again.',
-      confirmButtonText: 'Okay'
-    });
+    toastMessage = 'Error deleting prescription. Please try again.';
+    toastType = 'error';
   }
 }
 
   async function submitPrescription() {
     if (!dateVisited || !medication || !instructions || !qtyRefills || !prescriber) {
-      Swal.fire({
-      icon: 'error',
-      title: 'Incomplete Information',
-      text: 'Please fill in all fields.',
-      confirmButtonText: 'Okay'
-    });
+      toastMessage = 'Please fill in all fields.';
+      toastType = 'error';
       return;
     }
 
     if (!isValidNumber(qtyRefills)) {
-      Swal.fire({
-      icon: 'error',
-      title: 'Invalid Input',
-      text: 'Quantity/Refills must be a valid positive number.',
-      confirmButtonText: 'Okay'
-    });
+      toastMessage = 'Quantity/Refills must be a valid positive number.';
+      toastType = 'error';
       return;
     }
 
@@ -148,21 +116,13 @@
 
     try {
       await setDoc(doc(db, "prescriptions", `${patientId}_${new Date().toISOString()}`), prescriptionData);
-      Swal.fire({
-      icon: 'success',
-      title: 'Success',
-      text: 'Prescription added successfully!',
-      confirmButtonText: 'Okay'
-    });
+      toastMessage = 'Prescription added successfully!';
+      toastType = 'success';
       fetchPrescriptions();
     } catch (error) {
       console.error('Error adding prescription: ', error);
-      Swal.fire({
-      icon: 'error',
-      title: 'Error',
-      text: 'Error adding prescription. Please try again.',
-      confirmButtonText: 'Okay'
-    });
+      toastMessage = 'Error adding prescription. Please try again.';
+      toastType = 'error';
     }
   }
 
