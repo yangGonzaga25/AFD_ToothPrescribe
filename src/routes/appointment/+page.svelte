@@ -1,13 +1,13 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { getFirestore, collection, getDocs, query, where, updateDoc, doc } from 'firebase/firestore';
+  import { getFirestore, collection, getDocs, query, where, updateDoc, doc, addDoc } from 'firebase/firestore';
   import { initializeApp } from 'firebase/app';
   import { firebaseConfig } from '$lib/firebaseConfig';
   import { Card, Tabs, TabItem } from 'flowbite-svelte';
   import Sidebar from '../sidenav/+page.svelte';
   import { AngleLeftOutline, AngleRightOutline } from 'flowbite-svelte-icons';
- 
- 
+  import { Modal } from 'flowbite-svelte';
+  import { writable } from 'svelte/store';
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
@@ -34,7 +34,18 @@
   age: number;
   // Add any other properties as needed
 }
-
+interface Prescription {
+    appointmentId: string;
+    medicine: string;
+    dosage: string;
+    instructions: string;
+  }
+  let prescription: Prescription = {
+    appointmentId: '',
+    medicine: '',
+    dosage: '',
+    instructions: ''
+  };
 // Variables
 let totalAppointments = 0;
 let pendingAppointments = 0;
@@ -46,7 +57,44 @@ let currentSection = 0;
 let appointments: Appointment[] = [];
 let patientProfiles: PatientProfile[] = [];
 let pendingAppointmentsList: Appointment[] = [];
+let selectedAppointment: Appointment | null = null;
+let isModalOpen = false;
 
+let dateVisited: string = '';
+let prescriber: string = '';
+interface Medicine {
+    id: string; // or whatever properties are relevant
+    name: string;
+    stock: number;
+    quantity: number;
+}
+let availableMedicines: Medicine[] = [];
+let medication = '';                   
+let qtyRefills = '';                     
+let instructions = '';                
+let selectedMedicine: Medicine | null = null;
+let manualMedicines: Medicine[] = [];    
+
+interface PrescriptionMedicine {
+    medicine: string; // or whatever type is appropriate
+    dosage: string; // or number, depending on your use case
+    instructions: string;
+}
+
+let prescriptionMedicines: PrescriptionMedicine[] = []; // Update the type of prescriptionMedicines
+
+// Define 'today' as the current date
+const today = new Date();
+
+// Reset form fields
+dateVisited = today.toISOString().split('T')[0]; 
+medication = '';
+instructions = '';
+qtyRefills = '';
+prescriber = '';
+
+// svelte-ignore export_let_unused
+export let show = false;
 // Fetch appointments and profiles
 onMount(async () => {
   try {
@@ -128,13 +176,13 @@ const updatePendingAppointmentStatus = async (appointmentId: string, newStatus: 
     // Update the status field in Firestore
     await updateDoc(appointmentRef, {
       status: newStatus,
-      cancellationStatus: newStatus === 'Accepted' ? 'approved' : 'declined',
+      cancellationStatus: newStatus === 'Accepted' ? 'approved' : 'decline',
     });
 
     // Optimistically update the local state to reflect the changes immediately
     appointments = appointments.map(appointment => 
       appointment.id === appointmentId 
-        ? { ...appointment, status: newStatus, cancellationStatus: newStatus === 'Accepted' ? 'approved' : 'declined' }
+        ? { ...appointment, status: newStatus, cancellationStatus: newStatus === 'Accepted' ? 'approved' : 'decline' }
         : appointment
     );
 
@@ -164,7 +212,155 @@ const updatePendingAppointmentStatus = async (appointmentId: string, newStatus: 
     }
   });
 };
+const openModal = (appointmentId: string) => {
+  // Find the selected appointment by its ID
+  selectedAppointment = appointments.find(appointment => appointment.id === appointmentId) ?? null;
 
+  // Reset form fields
+  dateVisited = today.toISOString().split('T')[0]; 
+  medication = '';
+  instructions = '';
+  qtyRefills = '';
+  prescriber = '';
+
+  if (selectedAppointment) {
+    const patient = patientProfiles.find(profile => profile.id === selectedAppointment?.patientId);
+    if (patient) {
+      isModalOpen = true;
+      console.log('Modal should open:', isModalOpen);
+    } else {
+      console.error("Patient not found for this appointment.");
+    }
+  } else {
+    console.error("Appointment not found with ID:", appointmentId);
+  }
+};
+
+// All medicines in the prescription
+
+// Fetch available medicines from the database
+const fetchAvailableMedicines = async () => {
+  try {
+    const db = getFirestore();
+    const medicineRef = collection(db, "medicines");
+    const querySnapshot = await getDocs(medicineRef);
+
+    // Populate availableMedicines with the correct type
+    
+    availableMedicines = querySnapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    })) as Medicine[];
+
+    console.log("Fetched medicines:", availableMedicines);
+  } catch (error) {
+    if (error instanceof Error) {
+        console.error("Error fetching medicines:", error.message);
+    } else {
+        console.error("Error fetching medicines:", error);
+    }
+  }
+};
+
+// Call the function to fetch available medicines
+onMount(async () => {
+  await fetchAvailableMedicines();
+});
+
+// Add selected medicine from the database to the prescription
+const addSelectedMedicine = async () => {
+  if (selectedMedicine && qtyRefills) {
+    const db = getFirestore();
+    const { id, quantity, name } = selectedMedicine;
+
+    const qtyRefillsNumber = Number(qtyRefills); // Convert qtyRefills to a number
+
+    if (quantity >= qtyRefillsNumber) { // Use the converted number for comparison
+      try {
+        // Decrease the stock in Firestore
+        const updatedQuantity = quantity - qtyRefillsNumber;
+        await updateDoc(doc(db, "medicines", id), { quantity: updatedQuantity });
+
+        console.log(`Stock updated: ${name} now has ${updatedQuantity} left.`);
+
+        // Add the medicine to the prescription
+        prescriptionMedicines.push({
+          medicine: name,
+          dosage: qtyRefills,
+          instructions,
+        });
+
+        // Clear input fields
+        selectedMedicine = null;
+        qtyRefills = '';
+        instructions = '';
+      } catch (error) {
+        console.error("Error updating medicine stock:", error);
+      }
+    } else {
+      console.error("Insufficient stock for the selected medicine.");
+    }
+  } else {
+    console.error("Please select a medicine and specify the quantity.");
+  }
+};
+
+// Add manually entered medicine to the prescription
+const addManualMedicine = () => {
+  if (medication && qtyRefills) {
+    // Add manually to the prescription
+    prescriptionMedicines.push({
+      medicine: medication,
+      dosage: qtyRefills,
+      instructions,
+    });
+
+    console.log("Manually added medicine:", medication);
+
+    // Clear fields
+    medication = '';
+    qtyRefills = '';
+    instructions = '';
+  } else {
+    console.error("Please enter the medicine name and quantity.");
+  }
+};
+
+// Submit prescription
+const submitPrescription = async () => {
+  try {
+    if (selectedAppointment) {
+      const db = getFirestore();
+      const prescription = {
+        appointmentId: selectedAppointment.id,
+        medicines: prescriptionMedicines,
+        prescriber,
+        createdAt: new Date().toISOString(),
+      };
+
+      await addDoc(collection(db, "prescriptions"), prescription);
+
+      console.log("Prescription successfully saved to Firestore.");
+
+      // Clear prescription data
+      prescriptionMedicines = [];
+      prescriber = '';
+      isModalOpen = false;
+    } else {
+      console.error("No selected appointment found.");
+    }
+  } catch (error) {
+    if (error instanceof Error) {
+        console.error("Error saving prescription to Firestore:", error.message);
+    } else {
+        console.error("Error saving prescription to Firestore:", error); // Fallback for unknown error types
+    }
+}
+};
+
+const closeModal = () => {
+    isModalOpen = false; // Close the modal
+  };
 const goToNextSection = () => {
     if (currentSection < 1) {
       currentSection++;
@@ -206,7 +402,11 @@ const goToNextSection = () => {
   };
 
 
-    const handleCompletedAppointment = async (appointmentId: string, newStatus: string) => {
+  export const appointmentStore = writable<Appointment[]>([]);
+
+
+
+export const handleCompletedAppointment = async (appointmentId: string, newStatus: string) => {
   try {
     // Get a reference to the appointment document in Firestore
     const appointmentRef = doc(db, 'appointments', appointmentId);
@@ -215,15 +415,16 @@ const goToNextSection = () => {
     await updateDoc(appointmentRef, {
       status: newStatus === 'Completed' ? 'Completed' : 'Missed',
     });
-
-    // Optimistically update the local state to reflect the changes immediately
-    appointments = appointments.map(appointment => 
-      appointment.id === appointmentId 
-        ? { ...appointment, status: newStatus === 'Completed' ? 'Completed' : 'Missed' }
-        : appointment
+    // Optimistically update the local state
+    appointmentStore.update((prevAppointments: Appointment[]) =>
+      prevAppointments.map((appointment: Appointment) =>
+        appointment.id === appointmentId
+          ? { ...appointment, status: newStatus === 'Completed' ? 'Completed' : 'Missed' }
+          : appointment
+      )
     );
 
-    // Re-fetch the data to ensure the status update is reflected
+    // Re-fetch data (if needed)
     await fetchAppointments();
   } catch (error) {
     console.error('Error updating appointment status:', error);
@@ -396,7 +597,38 @@ const goToNextSection = () => {
   min-height: 300px;
   bottom: 20px;
 }
+/* Modal Overlay Styling */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5); /* Transparent black background */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999; /* Make sure modal is on top */
+  }
 
+  .modal-content {
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    width: 80%;
+    max-width: 500px;
+    z-index: 10000; /* Ensure the content stays above the overlay */
+  }
+
+  /* Prevent modal from closing when clicking inside the modal content */
+  .modal-content {
+    cursor: default;
+  }
+
+  /* Optional: Add a smooth transition effect */
+  .modal-overlay {
+    transition: visibility 0.3s ease-in-out;
+  }
 </style>
 
 <Sidebar {isCollapsed} {toggleSidebar} {logout} />
@@ -472,10 +704,9 @@ const goToNextSection = () => {
                 <button class="bg-blue-100 text-blue-500 px-3 py-1 rounded" on:click={() => updatePendingAppointmentStatus(appointment.id, 'Accepted')}>
                   Accept
                 </button>
-                <button class="bg-red-100 text-red-500 px-3 py-1 rounded" on:click={() => updatePendingAppointmentStatus(appointment.id, 'Declined')}>
+                <button class="bg-red-100 text-red-500 px-3 py-1 rounded" on:click={() => updatePendingAppointmentStatus(appointment.id, 'Decline')}>
                   Reject
                 </button>
-                
               </div>
             </div>
             {/if}
@@ -519,6 +750,7 @@ const goToNextSection = () => {
                     Decline
                   </button>
                 </div>
+                
               </div>
             {/if}
           {/each}
@@ -526,63 +758,188 @@ const goToNextSection = () => {
           <p class="text-center text-gray-500">No pending cancellation requests available.</p>
         {/if}
       </div>
-    {/if}
-    
-      
+     {/if} 
     </div>
-    {/if}
-  </div>
-<div class="container">
-  <div class="appointments-section">
-    <h2>Accepted Appointments</h2>
+  {/if}
 
-    <Tabs>
-      <TabItem 
-        class={currentView === "today" ? "active" : ""} 
-        on:click={() => currentView = "today"} 
-        title="Today">
-      </TabItem>
-      <TabItem 
-        class={currentView === "week" ? "active" : ""} 
-        on:click={() => currentView = "week"} 
-        title="This Week">
-      </TabItem>
-      <TabItem 
-        class={currentView === "month" ? "active" : ""} 
-        on:click={() => currentView = "month"} 
-        title="This Month">
-      </TabItem>
-    </Tabs>
+  </div>
+  <div class="container">
+    <div class="appointments-section">
+      <h2>Accepted Appointments</h2>
+  
+      <Tabs>
+        <TabItem 
+          class={currentView === "today" ? "active" : ""} 
+          on:click={() => currentView = "today"} 
+          title="Today">
+        </TabItem>
+        <TabItem 
+          class={currentView === "week" ? "active" : ""} 
+          on:click={() => currentView = "week"} 
+          title="This Week">
+        </TabItem>
+        <TabItem 
+          class={currentView === "month" ? "active" : ""} 
+          on:click={() => currentView = "month"} 
+          title="This Month">
+        </TabItem>
+      </Tabs>
+  
+      {#if filterAppointments(currentView).length > 0}
+        {#each filterAppointments(currentView) as appointment}
+          <div class="appointment-card">
+            <div class="appointment-details">
+              <p><strong>{appointment.date} at {appointment.time}</strong></p>
+              {#each patientProfiles as profile (profile.id)}
+                {#if profile.id === appointment.patientId}
+                  <p>{profile.name} {profile.lastName} ({profile.age} years old)</p>
+                {/if}
+              {/each}
+              <p>Service: {appointment.service}</p>
+            </div>
+            <div class="appointment-buttons">
+              <button class="bg-blue-100" on:click={() => handleCompletedAppointment(appointment.id, 'Completed')}>
+                Completed
+              </button>
+              <button class="bg-red-100" on:click={() => handleCompletedAppointment(appointment.id, 'Missed')}>
+                Missed
+              </button>
+              <button on:click={() => openModal(appointment.id)} class="bg-green-500 text-white px-4 py-2 rounded">
+                Add Prescription
+              </button>
+              
+              
+  
+            </div>
+          </div>
+        {/each}
+      {:else}
+        <div class="no-appointments">
+          <p>No appointments for the selected period.</p>
+        </div>
+      {/if}
+    </div>
+  </div>
+  
+ <!-- Modal with Overlay (Appears when isModalOpen is true) -->
+{#if isModalOpen}
+<!-- svelte-ignore a11y_click_events_have_key_events -->
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div class="modal-overlay" on:click={closeModal}> <!-- Overlay click closes the modal -->
+  <div class="modal-content" on:click|stopPropagation> <!-- Prevent clicking content from closing the modal -->
+    <h2 class="text-lg font-bold mb-4">
+      Add Prescription for 
+      {selectedAppointment 
+        ? (() => {
+            const patientProfile = patientProfiles.find(profile => profile.id === selectedAppointment?.patientId);
+            return patientProfile ? `${patientProfile.name} ${patientProfile.lastName}` : 'Patient';
+          })() 
+        : 'Patient'}
+    </h2>
     
 
-    {#if filterAppointments(currentView).length > 0}
-      {#each filterAppointments(currentView) as appointment}
-        <div class="appointment-card">
-          <div class="appointment-details">
-            <p><strong>{appointment.date} at {appointment.time}</strong></p>
-            {#each patientProfiles as profile (profile.id)}
-              {#if profile.id === appointment.patientId}
-                <p>{profile.name} {profile.lastName} ({profile.age} years old)</p>
-              {/if}
-            {/each}
-            <p>Service: {appointment.service}</p>
-          </div>
-          <div class="appointment-buttons">
-           
-            <button class="bg-blue-100" on:click={() => handleCompletedAppointment(appointment.id, 'Completed')}>
-              Completed
-            </button>
-            <button class="bg-red-100" on:click={() => handleCompletedAppointment(appointment.id, 'Missed')}>
-              Missed
-            </button>
-            
-          </div>
-        </div>
-      {/each}
-    {:else}
-      <div class="no-appointments">
-        <p>No appointments for the selected period.</p>
+    <form on:submit|preventDefault={submitPrescription}>
+      <div class="mb-4">
+        <label for="dateVisited" class="block text-sm font-medium mb-1">Date Visited</label>
+        <input id="dateVisited" type="date" bind:value={dateVisited} required class="border rounded p-2 w-full" />
       </div>
-    {/if}
+
+
+      <div class="mb-4">
+        <label for="availableMedicine" class="block text-sm font-medium mb-1">
+          Available Medicines
+        </label>
+        <select
+          id="availableMedicine"
+          bind:value={selectedMedicine}
+          class="border rounded p-2 w-full"
+        >
+          <option value="" disabled>Select a medicine</option>
+          {#each availableMedicines as med}
+            <option value={med}>
+              {med.name} (Stock: {med.quantity})
+            </option>
+          {/each}
+        </select>
+      </div>
+      
+
+<div class="mb-4">
+  <label for="qtyRefills" class="block text-sm font-medium mb-1">Qty/Refills</label>
+  <input
+    id="qtyRefills"
+    type="number"
+    bind:value={qtyRefills}
+    class="border rounded p-2 w-full"
+  />
+</div>
+
+<div class="mb-4">
+  <label for="instructions" class="block text-sm font-medium mb-1">Instructions</label>
+  <textarea
+    id="instructions"
+    bind:value={instructions}
+    class="border rounded p-2 w-full"
+  ></textarea>
+</div>
+
+<button type="button" class="bg-blue-500 text-white py-2 px-4 rounded" on:click={addSelectedMedicine}>
+  Add Selected Medicine
+</button>
+
+<!-- Manual Medicine Input -->
+<hr class="my-4" />
+
+<h3 class="text-lg font-medium">Add Manual Medicine</h3>
+<div class="mb-4">
+  <label for="manualMedication" class="block text-sm font-medium mb-1">Medication</label>
+  <input
+    id="manualMedication"
+    type="text"
+    bind:value={medication}
+    class="border rounded p-2 w-full"
+  />
+</div>
+
+<div class="mb-4">
+  <label for="manualQtyRefills" class="block text-sm font-medium mb-1">Qty/Refills</label>
+  <input
+    id="manualQtyRefills"
+    type="number"
+    bind:value={qtyRefills}
+    class="border rounded p-2 w-full"
+  />
+</div>
+
+<div class="mb-4">
+  <label for="manualInstructions" class="block text-sm font-medium mb-1">Instructions</label>
+  <textarea
+    id="manualInstructions"
+    bind:value={instructions}
+    class="border rounded p-2 w-full"
+  ></textarea>
+</div>
+
+<button type="button" class="bg-blue-500 text-white py-2 px-4 rounded" on:click={addManualMedicine}>
+  Add Manual Medicine
+</button>
+
+<!-- Display Added Medicines -->
+<h3 class="mt-4 font-medium">Prescription Medicines:</h3>
+<ul>
+  {#each prescriptionMedicines as med, index}
+    <li class="mt-2">
+      {index + 1}. {med.medicine} - {med.dosage} - {med.instructions}
+    </li>
+  {/each}
+</ul>
+
+<!-- Submit Prescription -->
+<button type="button" class="bg-green-500 text-white py-2 px-4 mt-4 rounded" on:click={submitPrescription}>
+  Submit Prescription
+</button>
+
+     
   </div>
 </div>
+{/if}

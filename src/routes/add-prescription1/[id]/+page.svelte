@@ -75,19 +75,7 @@
     return !isNaN(number) && number > 0;
   }
 
-  async function deletePrescription(prescriptionId: string) {
-  try {
-    const prescriptionRef = doc(db, "prescriptions", prescriptionId);
-    await deleteDoc(prescriptionRef);
-    toastMessage = 'Prescription deleted successfully!';
-    toastType = 'success';
-    fetchPrescriptions(); // Refresh the prescription list after deletion
-  } catch (error) {
-    console.error('Error deleting prescription: ', error);
-    toastMessage = 'Error deleting prescription. Please try again.';
-    toastType = 'error';
-  }
-}
+
 
   async function submitPrescription() {
     if (!dateVisited || !medication || !instructions || !qtyRefills || !prescriber) {
@@ -202,24 +190,24 @@
   transform: translateY(0); /* Reset lift effect */
 }
 
-  .dashboard {
-      display: flex;
-      height: 100vh;
-      overflow: hidden;
+.dashboard {
+    display: flex;
+    min-height: 100vh; /* Adjusted for container expansion */
+    overflow-y: auto; /* Added scrolling to the parent */
+    padding: 20px;
+    background-color: #f9f9f9; /* Optional for contrast */
   }
 
   .content-container {
-      padding: 40px;
-      width: 100%;
-      max-width: 50rem;
-      margin: auto;
-      margin-top: 50px;
-      border-radius: 0.5rem;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-      background-color: white;
-      overflow-y: auto; /* Enable scrolling */
-      max-height: calc(100vh - 80px); /* Ensure it doesn't overflow the viewport */
+    width: 100%;
+    max-width: 40rem; /* Fixed width for better readability */
+    margin: auto;
+    border-radius: 0.375rem;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    background-color: white;
+    padding: 20px;
   }
+
 
   /* Hide scrollbar for Chrome, Safari, and Opera */
   .content-container::-webkit-scrollbar {
@@ -232,25 +220,6 @@
       scrollbar-width: none;  /* Firefox */
   }
 
-  table {
-    width: 100%;
-    margin-top: 2rem;
-    border-collapse: collapse;
-  }
-
-  table, th, td {
-    border: 1px solid #ddd;
-  }
-
-  th, td {
-    padding: 12px;
-    text-align: left;
-  }
-
-  th {
-    background-color: #f2f2f2;
-  }
-  
 </style>
 
 <div class="dashboard">
@@ -344,47 +313,6 @@
     
     </form>
 
-    <!-- Past Prescriptions Table -->
-    <h2 style="font-size: 1.5rem; font-weight: bold; margin-top: 2rem;">Past Prescriptions</h2>
-    {#if prescriptions.length > 0}
-      <table>
-        <thead>
-          <tr>
-            <th>Date Visited</th>
-            <th>Medication</th>
-            <th>Instructions</th>
-            <th>Qty/Refills</th>
-            <th>Prescriber</th>
-            <th>Action</th>
-
-          </tr>
-        </thead>
-        <tbody>
-          {#each prescriptions as prescription}
-            <tr>
-              <td>{new Date(prescription.dateVisited).toLocaleDateString()}</td>
-              <td>{prescription.medication}</td>
-              <td>{prescription.instructions}</td>
-              <td>{isNaN(prescription.qtyRefills) || prescription.qtyRefills <= 0 ? '' : prescription.qtyRefills}</td>
-              <td>{prescription.prescriber}</td>
-              <td>
-                <!-- Add a Delete button -->
-                <Button 
-  class="delete-prescription"
-  on:click={() => deletePrescription(prescription.id)}
->
-  Delete
-</Button>
-
-
-              </td>
-            </tr>
-          {/each}
-        </tbody>
-        
-      </table>
-    {:else}
-      <p>No past prescriptions available.</p>
-    {/if}
+   
   </div>
 </div>

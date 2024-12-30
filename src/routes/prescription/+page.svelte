@@ -111,16 +111,18 @@
 
     // Add new prescription function
     function addPrescription(id: string | undefined) {
-        // Check if the patient is already prescribed
-        const isPrescribed = prescribedPatients.some(patient => patient.id === id);
-        if (isPrescribed) {
-            alert("This patient has already been prescribed.");
-        } else {
-            if (id) {
-                goto(`/add-prescription1/${id}`);
-            }
+    const isPrescribed = prescribedPatients.some(patient => patient.id === id);
+    if (isPrescribed) {
+        alert("This patient has already been prescribed.");
+    } else {
+        if (id) {
+            // You can show a modal or navigate to an 'add prescription' section without replacing the current page
+            showModal = true;  // Show the modal for adding a prescription
+            currentPatient = patients.find(patient => patient.id === id);  // Set the current patient to the modal context
         }
     }
+}
+
 
     // Open the modal to view prescriptions of the selected patient
     function openPrescriptionModal(patient: any) {
@@ -145,14 +147,6 @@
         font-family: 'Roboto', sans-serif;
     }
 
-    :global(.content) {
-        flex-grow: 1;
-        overflow: auto;
-        margin-left: -10rem;
-        transition: margin-left 0.3s ease;
-        padding: 20px;
-       
-    }
 
     /* Header Styling */
     :global(.content-header) {
