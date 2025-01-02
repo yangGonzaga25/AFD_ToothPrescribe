@@ -431,14 +431,7 @@ export const handleCompletedAppointment = async (appointmentId: string, newStatu
   }
 };
 
-
-
-    function handleCompleteAppointment(id: string): any {
-        throw new Error('Function not implemented.');
-    }
 </script>
-
-
 
 <style>
  /* Position both containers on the right side and adjust width */
@@ -535,7 +528,7 @@ export const handleCompletedAppointment = async (appointmentId: string, newStatu
   bottom: 20px;
   left: 230px; 
   max-height: 90%; /* Adjusted height for better visibility */
-  min-height: 400px; /* Increased minimum height */
+  min-height: 600px; /* Increased minimum height */
   overflow-y: auto; /* Ensures scrolling if content exceeds container size */
   width: 650px;
 }

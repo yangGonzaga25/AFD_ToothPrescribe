@@ -122,7 +122,7 @@
             }
         }
     }
-}
+
 
 
     // Open the modal to view prescriptions of the selected patient
