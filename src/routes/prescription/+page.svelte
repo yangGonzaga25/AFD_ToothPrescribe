@@ -45,6 +45,7 @@
             return 0;
         });
     }
+    
     function filterPatients() {
     if (searchTerm.trim() === '') {
         filteredPatients = [...patients];
@@ -81,7 +82,7 @@ function filterAndSortPatients() {
     });
 }
 
-    async function fetchPatients() {
+async function fetchPatients() {
         try {
             const querySnapshot = await getDocs(collection(db, "patientProfiles"));
             patients = querySnapshot.docs.map(doc => ({
@@ -90,9 +91,7 @@ function filterAndSortPatients() {
                 lastName: doc.data().lastName,
                 address: doc.data().address,
                 phone: doc.data().phone,
-                age: doc.data().age,
-                instructions: doc.data().instructions || '',
-                medication: doc.data().medication || ''
+                age: doc.data().age
             }));
             filteredPatients = [...patients];
         } catch (error) {
@@ -164,7 +163,7 @@ function filterAndSortPatients() {
 
     // Open the modal to view prescriptions of the selected patient
     function openPrescriptionModal(patient: any) {
-        currentPatient = patient;
+        currentPatient = prescribedPatients.find(p => p.id === patient.id) || {};
         showModal = true;
     }
 
