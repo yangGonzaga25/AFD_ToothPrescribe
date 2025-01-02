@@ -1,39 +1,88 @@
 <script lang="ts">
     import { Button, Table, TableBody, TableBodyCell, TableBodyRow, TableHead, TableHeadCell } from 'flowbite-svelte'; 
-    import Sidebar from '../sidenav/+page.svelte'; // Import the Sidebar component
+    import Sidebar from '../sidenav/+page.svelte'; 
     import { onMount } from 'svelte';
-    import { firebaseConfig } from "$lib/firebaseConfig"; // Import Firebase config
+    import { firebaseConfig } from "$lib/firebaseConfig"; 
     import { initializeApp } from 'firebase/app';
-    import { getFirestore, collection, getDocs } from 'firebase/firestore'; // Firebase Firestore functions
-    import { goto } from '$app/navigation'; // To programmatically navigate
-    import { EyeOutline } from 'flowbite-svelte-icons'; // Eye icon for viewing prescriptions
-    import Swal from 'sweetalert2';
+    import { getFirestore, collection, getDocs } from 'firebase/firestore'; 
+    import { goto } from '$app/navigation'; 
+    import { EyeOutline } from 'flowbite-svelte-icons'; 
 
-    // Initialize Firebase
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
     let isCollapsed = false;
     let patients: any[] = [];
     let prescribedPatients: any[] = [];
-    let searchTerm = '';  // Holds the search term entered by the user
+    let searchTerm = '';  
     let filteredPatients: any[] = [];
     
-    let showModal = false; // Controls the visibility of the modal
-    let currentPatient: any = {}; // Stores the current patient to display their prescriptions
+    let showModal = false; 
+    let currentPatient: any = {}; 
 
-    // Toggle sidebar collapse
+    let sortColumn = '';
+    let sortDirection = 'asc'; 
+
     function toggleSidebar() {
         isCollapsed = !isCollapsed;
     }
 
-    // Logout function
     function logout() {
-        window.location.href = "/"; // Redirect to main landing page
+        window.location.href = "/"; 
     }
     
-    // Fetch all patients from Firestore
-    async function fetchPatients() {
+    function sortPatients(column: string) {
+        if (sortColumn === column) {
+            sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+            sortColumn = column;
+            sortDirection = 'asc';
+        }
+
+        filteredPatients.sort((a, b) => {
+            if (a[column] < b[column]) return sortDirection === 'asc' ? -1 : 1;
+            if (a[column] > b[column]) return sortDirection === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }
+    
+    function filterPatients() {
+    if (searchTerm.trim() === '') {
+        filteredPatients = [...patients];
+    } else {
+        filteredPatients = patients.filter(patient =>
+            Object.values(patient).some(value => {
+                if (typeof value === 'string') {
+                    return value.toLowerCase().includes(searchTerm.toLowerCase());
+                }
+                if (typeof value === 'number') {
+                    return value.toString().includes(searchTerm);
+                }
+                return false;
+            })
+        );
+    }
+}
+
+function filterAndSortPatients() {
+    // Step 1: Filter patients based on the search term
+    if (searchTerm.trim() === '') {
+        filteredPatients = [...patients];
+    } else {
+        filteredPatients = patients.filter(patient =>
+            patient.name.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }
+
+    // Step 2: Sort the filtered patients alphabetically
+    filteredPatients.sort((a, b) => {
+        if (a.name < b.name) return sortDirection === 'asc' ? -1 : 1;
+        if (a.name > b.name) return sortDirection === 'asc' ? 1 : -1;
+        return 0;
+    });
+}
+
+async function fetchPatients() {
         try {
             const querySnapshot = await getDocs(collection(db, "patientProfiles"));
             patients = querySnapshot.docs.map(doc => ({
@@ -42,15 +91,15 @@
                 lastName: doc.data().lastName,
                 address: doc.data().address,
                 phone: doc.data().phone,
-                age: doc.data().age,
-                instructions: doc.data().instructions || '',
-                medication: doc.data().medication || ''
+                age: doc.data().age
             }));
             filteredPatients = [...patients];
         } catch (error) {
             console.error("Error fetching patients:", error);
         }
     }
+
+    
 
     // Fetch prescribed patients and map to patient profiles
     async function fetchPrescribedPatients() {
@@ -90,25 +139,14 @@
         });
     }
 
-    // Filter patients based on search term
-    function filterPatients() {
-        if (searchTerm.trim() === '') {
-            filteredPatients = []; // Hide table if search is empty
-        } else {
-            filteredPatients = patients.filter(patient =>
-                patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                patient.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                patient.phone.includes(searchTerm) ||
-                patient.age.toString().includes(searchTerm)
-            );
-        }
-    }
 
-    // Fetch patients and prescribed patients on mount
+
     onMount(async () => {
-        await fetchPatients();
-        await fetchPrescribedPatients();
-    });
+    await fetchPatients();
+    await fetchPrescribedPatients();
+    filterAndSortPatients(); // Initialize with default settings
+});
+
 
     // Add new prescription function
     function addPrescription(id: string | undefined) {
@@ -127,7 +165,7 @@
 
     // Open the modal to view prescriptions of the selected patient
     function openPrescriptionModal(patient: any) {
-        currentPatient = patient;
+        currentPatient = prescribedPatients.find(p => p.id === patient.id) || {};
         showModal = true;
     }
 
@@ -335,8 +373,54 @@
         width: 100%;
     }
     
+    search-bar {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
 
-   
+
+.search-and-sort-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    width: 100%;
+    max-width: 1200px;
+    margin: auto;
+}
+
+.search-input {
+    flex: 1;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+    box-sizing: border-box;
+}
+
+.search-input:focus {
+    border-color: #08B8F3;
+    outline: none;
+}
+
+.sort-dropdown {
+    padding: 15px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 1rem;
+    background-color: #fff;
+    color: #333;
+    transition: border-color 0.3s ease;
+}
+
+.sort-dropdown:focus {
+    border-color: #08B8F3;
+    outline: none;
+}
+
     
 </style>
 <div class="dashboard">
@@ -361,83 +445,50 @@
             </div>
      
         <!-- Search Bar -->
-        <div class="search-bar">
+        <div class="search-and-sort-container">
             <input
                 type="text"
-                class="search-input"
-                placeholder="Search"
+                placeholder="Search patients..."
                 bind:value={searchTerm}
+                on:input={filterAndSortPatients}
+                class="search-input"
             />
+            <select bind:value={sortDirection} on:change={filterAndSortPatients} class="sort-dropdown">
+                <option value="asc">Sort by Name: A–Z</option>
+                <option value="desc">Sort by Name: Z–A</option>
+            </select>
         </div>
-
+        
+        
         <div class="table-container">
-            <!-- Patient Table (Filtered) -->
-            {#if searchTerm.trim() !== '' && filteredPatients.length > 0}
-                <h3>All Patients</h3>
-                <Table shadow style="width: 100%; height: auto;">
-                    <TableHead style="background-color: #08B8F3; color: white;">
-                        <TableHeadCell class="border border-gray-300">Name</TableHeadCell>
-                        <TableHeadCell class="border border-gray-300">Address</TableHeadCell>
-                        <TableHeadCell class="border border-gray-300">Phone</TableHeadCell>
-                        <TableHeadCell class="border border-gray-300">Age</TableHeadCell>
-                        <TableHeadCell class="border border-gray-300">Actions</TableHeadCell>
-                    </TableHead>
-                    <TableBody tableBodyClass="divide-y">
-                        {#each filteredPatients as patient (patient.id)}
-                            <TableBodyRow class="table-body-row">
-                                <TableBodyCell class="border border-gray-300">{patient.name} {patient.lastName}</TableBodyCell>
-                                <TableBodyCell class="border border-gray-300">{patient.address}</TableBodyCell>
-                                <TableBodyCell class="border border-gray-300">{patient.phone}</TableBodyCell>
-                                <TableBodyCell class="border border-gray-300">
-                                    <div style="display: flex; justify-content: center; align-items: center; height: 100%;">{patient.age}</div>
-                                </TableBodyCell>
-                                <TableBodyCell class="border border-gray-300">
-                                    <button on:click={() => addPrescription(patient.id)} class="bg-blue-500 text-white px-3 py-1 rounded">Add</button>
-                                </TableBodyCell>
-                            </TableBodyRow>
-                        {/each}
-                    </TableBody>
-                </Table>
-        
-            {:else if searchTerm.trim() !== ''}
-                <p>No patients found matching the search term.</p>
-            {/if}
-        
-            <!-- Prescribed Patients Table -->
-            <h3>Prescribed Patients</h3>
-            {#if prescribedPatients.length === 0}
-                <p>No prescribed patients found.</p>
-            {:else}
-                <Table shadow style="width: 100%; height: auto;" class="mt-4 border border-gray-300">
-                    <TableHead style="background-color: #08B8F3; color: white;">
-                        <TableHeadCell class="border border-gray-300">Name</TableHeadCell>
-                        <TableHeadCell class="border border-gray-300">Address</TableHeadCell>
-                        <TableHeadCell class="border border-gray-300">Phone</TableHeadCell>
-                        <TableHeadCell class="border border-gray-300">Age</TableHeadCell>
-                        <TableHeadCell class="border border-gray-300">Prescription</TableHeadCell>
-                    </TableHead>
-                    <TableBody tableBodyClass="divide-y">
-                        {#each prescribedPatients as patient (patient.id)}
-                            <TableBodyRow class="table-body-row">
-                                <TableBodyCell class="border border-gray-300">{patient.fullName}</TableBodyCell>
-                                <TableBodyCell class="border border-gray-300">{patient.address}</TableBodyCell>
-                                <TableBodyCell class="border border-gray-300">{patient.phone}</TableBodyCell>
-                                <TableBodyCell class="border border-gray-300">{patient.age}</TableBodyCell>
-                                <TableBodyCell class="border border-gray-300">
-                                    <button 
-                                        on:click={() => openPrescriptionModal(patient)} 
-                                        class="view-button flex items-center bg-none border-none cursor-pointer text-blue-500 hover:text-blue-700"
-                                    >
-                                        <EyeOutline class="w-5 h-5 mr-1" />
-                                        <span>View</span>
-                                    </button>
-                                </TableBodyCell>
-                            </TableBodyRow>
-                        {/each}
-                    </TableBody>
-                </Table>
-            {/if}
+            <table>
+                <thead>
+                    <tr>
+                        <th on:click={() => sortPatients('name')}>Name</th>
+                        <th on:click={() => sortPatients('age')}>Age</th>
+                        <th on:click={() => sortPatients('address')}>Address</th>
+                        <th on:click={() => sortPatients('phone')}>Phone</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {#each filteredPatients as patient}
+                        <tr>
+                            <td>{patient.name}</td>
+                            <td>{patient.age}</td>
+                            <td>{patient.address}</td>
+                            <td>{patient.phone}</td>
+                            <td>
+                                <button on:click={() => openPrescriptionModal(patient)}>
+                                    View Prescriptions
+                                </button>
+                            </td>
+                        </tr>
+                    {/each}
+                </tbody>
+            </table>
         </div>
+        
     </div>
 </div>
         <!-- Modal Content -->
