@@ -7,6 +7,7 @@
     import { getFirestore, collection, getDocs } from 'firebase/firestore'; // Firebase Firestore functions
     import { goto } from '$app/navigation'; // To programmatically navigate
     import { EyeOutline } from 'flowbite-svelte-icons'; // Eye icon for viewing prescriptions
+    import Swal from 'sweetalert2';
 
     // Initialize Firebase
     const app = initializeApp(firebaseConfig);
@@ -111,14 +112,14 @@
 
     // Add new prescription function
     function addPrescription(id: string | undefined) {
-    const isPrescribed = prescribedPatients.some(patient => patient.id === id);
-    if (isPrescribed) {
-        alert("This patient has already been prescribed.");
-    } else {
-        if (id) {
-            // You can show a modal or navigate to an 'add prescription' section without replacing the current page
-            showModal = true;  // Show the modal for adding a prescription
-            currentPatient = patients.find(patient => patient.id === id);  // Set the current patient to the modal context
+        // Check if the patient is already prescribed
+        const isPrescribed = prescribedPatients.some(patient => patient.id === id);
+        if (isPrescribed) {
+            alert("This patient has already been prescribed.");
+        } else {
+            if (id) {
+                goto(`/add-prescription1/${id}`);
+            }
         }
     }
 }
