@@ -1,8 +1,23 @@
 <script>
+    import { onMount } from 'svelte';
+    
     export let isCollapsed = false;
     export let toggleSidebar;
     export let logout;
+
+    // Load the saved state of isCollapsed from sessionStorage
+    onMount(() => {
+        const savedState = sessionStorage.getItem('isCollapsed');
+        isCollapsed = savedState === 'true'; // Convert string to boolean
+    });
+
+    // Update toggleSidebar to save the state
+    toggleSidebar = () => {
+        isCollapsed = !isCollapsed;
+        sessionStorage.setItem('isCollapsed', isCollapsed); // Save the state
+    };
 </script>
+
 
 <style>
     .layout {
@@ -246,4 +261,5 @@
     <div class="content {isCollapsed ? 'shifted collapsed' : 'shifted'}">
         <slot /> <!-- Slot for the main content -->
     </div>
+    
 </div>
