@@ -373,12 +373,7 @@ async function fetchPatients() {
         width: 100%;
     }
     
-    search-bar {
-    flex: 1;
-    padding: 8px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-}
+  
 
 
 .search-and-sort-container {

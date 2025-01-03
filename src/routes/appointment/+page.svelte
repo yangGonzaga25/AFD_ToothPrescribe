@@ -406,7 +406,7 @@ const goToNextSection = () => {
 
 
 
-export const handleCompletedAppointment = async (appointmentId: string, newStatus: string) => {
+  export const handleCompletedAppointment = async (appointmentId: string, newStatus: string) => {
   try {
     // Get a reference to the appointment document in Firestore
     const appointmentRef = doc(db, 'appointments', appointmentId);
@@ -415,6 +415,7 @@ export const handleCompletedAppointment = async (appointmentId: string, newStatu
     await updateDoc(appointmentRef, {
       status: newStatus === 'Completed' ? 'Completed' : 'Missed',
     });
+
     // Optimistically update the local state
     appointmentStore.update((prevAppointments: Appointment[]) =>
       prevAppointments.map((appointment: Appointment) =>
@@ -424,8 +425,9 @@ export const handleCompletedAppointment = async (appointmentId: string, newStatu
       )
     );
 
-    // Re-fetch data (if needed)
+    // If re-fetching is still needed
     await fetchAppointments();
+
   } catch (error) {
     console.error('Error updating appointment status:', error);
   }
@@ -791,15 +793,16 @@ export const handleCompletedAppointment = async (appointmentId: string, newStatu
               <p>Service: {appointment.service}</p>
             </div>
             <div class="appointment-buttons">
+              <button on:click={() => openModal(appointment.id)} class="bg-green-500 text-white px-4 py-2 rounded">
+                Add Prescription
+              </button>
               <button class="bg-blue-100" on:click={() => handleCompletedAppointment(appointment.id, 'Completed')}>
                 Completed
               </button>
               <button class="bg-red-100" on:click={() => handleCompletedAppointment(appointment.id, 'Missed')}>
                 Missed
               </button>
-              <button on:click={() => openModal(appointment.id)} class="bg-green-500 text-white px-4 py-2 rounded">
-                Add Prescription
-              </button>
+          
               
               
   
@@ -815,105 +818,92 @@ export const handleCompletedAppointment = async (appointmentId: string, newStatu
   </div>
   
  <!-- Modal with Overlay (Appears when isModalOpen is true) -->
-{#if isModalOpen}
-  <!-- svelte-ignore a11y_click_events_have_key_events -->
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="modal-overlay" on:click={closeModal} role="dialog" aria-labelledby="modal-title" aria-hidden={!isModalOpen}>
-    <div class="modal-content" on:click|stopPropagation tabindex="-1">
-      <button class="absolute top-2 right-2 text-white text-xl" on:click={closeModal} aria-label="Close Modal">X</button>
-      <h2 id="modal-title" class="text-lg font-bold mb-4">
-        Add Prescription for 
-        {selectedAppointment 
-          ? (() => {
-              const patientProfile = patientProfiles.find(profile => profile.id === selectedAppointment?.patientId);
-              return patientProfile ? `${patientProfile.name} ${patientProfile.lastName}` : 'Patient';
-            })() 
-          : 'Patient'}
-      </h2>
+ {#if isModalOpen}
+ <!-- svelte-ignore a11y_click_events_have_key_events -->
+ <!-- svelte-ignore a11y_no_static_element_interactions -->
+ <div class="modal-overlay" on:click={closeModal} role="dialog" aria-labelledby="modal-title" aria-hidden={!isModalOpen}>
+   <div class="modal-content" on:click|stopPropagation tabindex="-1">
+     <button class="absolute top-2 right-2 text-white text-xl" on:click={closeModal} aria-label="Close Modal">X</button>
+     <h2 id="modal-title" class="text-lg font-bold mb-4">
+       Add Prescription for 
+       {selectedAppointment 
+         ? (() => {
+             const patientProfile = patientProfiles.find(profile => profile.id === selectedAppointment?.patientId);
+             return patientProfile ? `${patientProfile.name} ${patientProfile.lastName}` : 'Patient';
+           })() 
+         : 'Patient'}
+     </h2>
 
-      <div class="flex items-center justify-between space-x-4">
-        <!-- Left Side (Prescription Form) -->
-        <form on:submit|preventDefault={submitPrescription} class="w-full md:w-1/2 space-y-4">
-          <div class="mb-4">
-            <label for="dateVisited" class="block text-sm font-medium mb-1">Date Visited</label>
-            <input id="dateVisited" type="date" bind:value={dateVisited} required class="border rounded p-2 w-full focus:ring-2 focus:ring-green-500" />
-          </div>
-
-          <div class="mb-4">
-            <label for="availableMedicine" class="block text-sm font-medium mb-1">Available Medicines</label>
-            <select id="availableMedicine" bind:value={selectedMedicine} class="border rounded p-2 w-full focus:ring-2 focus:ring-green-500">
-              <option value="" disabled>Select a medicine</option>
-              {#each availableMedicines as med}
-                <option value={med}>
-                  {med.name} (Stock: {med.quantity})
-                </option>
-              {/each}
-            </select>
-          </div>
-
-          <div class="mb-4">
-            <label for="qtyRefills" class="block text-sm font-medium mb-1">Qty/Refills</label>
-            <input id="qtyRefills" type="number" bind:value={qtyRefills} class="border rounded p-2 w-full focus:ring-2 focus:ring-green-500" />
-          </div>
-
-          <div class="mb-4">
-            <label for="instructions" class="block text-sm font-medium mb-1">Instructions</label>
-            <textarea id="instructions" bind:value={instructions} class="border rounded p-2 w-full focus:ring-2 focus:ring-green-500"></textarea>
-          </div>
-        </form>
-
-        <!-- Line Separator -->
-        <hr class="h-36 border-l mx-4" />
-
-        <!-- Right Side (Manual Medicine Input) -->
-        <div class="w-full md:w-1/2 space-y-4">
-          <h3 class="text-lg font-medium">Add Manual Medicine</h3>
-          <div class="mb-4">
-            <label for="manualMedication" class="block text-sm font-medium mb-1">Medication</label>
-            <input id="manualMedication" type="text" bind:value={medication} class="border rounded p-2 w-full focus:ring-2 focus:ring-green-500" />
-          </div>
-
-          <div class="mb-4">
-            <label for="manualQtyRefills" class="block text-sm font-medium mb-1">Qty/Refills</label>
-            <input id="manualQtyRefills" type="number" bind:value={qtyRefills} class="border rounded p-2 w-full focus:ring-2 focus:ring-green-500" />
-          </div>
-
-          <div class="mb-4">
-            <label for="manualInstructions" class="block text-sm font-medium mb-1">Instructions</label>
-            <textarea id="manualInstructions" bind:value={instructions} class="border rounded p-2 w-full focus:ring-2 focus:ring-green-500"></textarea>
-          </div>
-
-          <div class="mb-4">
-            <label for="prescriber" class="block text-sm font-medium mb-1">Prescriber</label>
-            <select
-              id="prescriber"
-              bind:value={prescriber}
-              class="border rounded p-2 w-full focus:ring-2 focus:ring-green-500"
-            >
-              <option value="Alfred Domingo">Alfred Domingo</option>
-              <option value="Fernalyn Domingo">Fernalyn Domingo</option>
-            </select>
-          </div>
+     <div class="space-y-8">
+      <!-- Left Side (Prescription Form) -->
+      <form on:submit|preventDefault={submitPrescription} class="w-full space-y-4">
+        <div class="mb-4">
+          <label for="dateVisited" class="block text-sm font-medium mb-1">Date Visited</label>
+          <input id="dateVisited" type="date" bind:value={dateVisited} required class="border rounded p-2 w-full focus:ring-2 focus:ring-green-500" />
         </div>
-      </div>
+    
+        <div class="mb-4">
+          <label for="availableMedicine" class="block text-sm font-medium mb-1">Available Medicines</label>
+          <select id="availableMedicine" bind:value={selectedMedicine} class="border rounded p-2 w-full focus:ring-2 focus:ring-green-500">
+            <option value="" disabled>Select a medicine</option>
+            {#each availableMedicines as med}
+              <option value={med}>
+                {med.name} (Stock: {med.quantity})
+              </option>
+            {/each}
+          </select>
+        </div>
+        <div class="mb-4">
+          <label for="manualMedication" class="block text-sm font-medium mb-1">Medication</label>
+          <input id="manualMedication" type="text" bind:value={medication} class="border rounded p-2 w-full focus:ring-2 focus:ring-green-500" />
+        </div>
 
-      <!-- Submit Prescription -->
-      <div class="flex justify-end mt-6">
-        <button
-          type="button"
-          class="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500"
-          on:click={() => {
-            // Add both selected and manual medicines before submitting
-            addSelectedMedicine();
-            addManualMedicine();
-
-            // Submit the prescription after adding medicines
-            submitPrescription();
-          }}
-        >
-          Submit Prescription
-        </button>
+        <div class="mb-4">
+          <label for="qtyRefills" class="block text-sm font-medium mb-1">Qty/Refills</label>
+          <input id="qtyRefills" type="number" bind:value={qtyRefills} class="border rounded p-2 w-full focus:ring-2 focus:ring-green-500" />
+        </div>
+    
+        <div class="mb-4">
+          <label for="instructions" class="block text-sm font-medium mb-1">Instructions</label>
+          <textarea id="instructions" bind:value={instructions} class="border rounded p-2 w-full focus:ring-2 focus:ring-green-500"></textarea>
+        </div>
+      </form>
+     <div class="mb-4">
+          <label for="prescriber" class="block text-sm font-medium mb-1">Prescriber</label>
+          <select
+            id="prescriber"
+            bind:value={prescriber}
+            class="border rounded p-2 w-full focus:ring-2 focus:ring-green-500"
+          >
+            <option value="Alfred Domingo">Alfred Domingo</option>
+            <option value="Fernalyn Domingo">Fernalyn Domingo</option>
+          </select>
+        </div>
+     
+    
+       
       </div>
+ 
+    <!-- Submit Prescription -->
+    <div class="flex justify-end mt-6">
+      <button
+        type="button"
+        class="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500"
+        on:click={() => {
+          // Add both selected and manual medicines before submitting
+          addSelectedMedicine();
+          addManualMedicine();
+    
+          // Submit the prescription after adding medicines
+          submitPrescription();
+        }}
+      >
+        Submit Prescription
+      </button>
     </div>
+    
+   </div>
   </div>
+    
+ 
 {/if}

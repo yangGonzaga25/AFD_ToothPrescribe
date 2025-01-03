@@ -83,7 +83,7 @@
     .sidebar-menu li:hover {
         background-color: #007bb5;
         color: white;
-        transform: scale(1.05); /* Slightly enlarge the item on hover */
+        /* Slightly enlarge the item on hover */
     }
 
     .sidebar-menu a {
