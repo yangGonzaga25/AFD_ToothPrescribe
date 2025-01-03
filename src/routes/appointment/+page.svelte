@@ -816,123 +816,104 @@ export const handleCompletedAppointment = async (appointmentId: string, newStatu
   
  <!-- Modal with Overlay (Appears when isModalOpen is true) -->
 {#if isModalOpen}
-<!-- svelte-ignore a11y_click_events_have_key_events -->
-<!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="modal-overlay" on:click={closeModal}> <!-- Overlay click closes the modal -->
-  <div class="modal-content" on:click|stopPropagation> <!-- Prevent clicking content from closing the modal -->
-    <h2 class="text-lg font-bold mb-4">
-      Add Prescription for 
-      {selectedAppointment 
-        ? (() => {
-            const patientProfile = patientProfiles.find(profile => profile.id === selectedAppointment?.patientId);
-            return patientProfile ? `${patientProfile.name} ${patientProfile.lastName}` : 'Patient';
-          })() 
-        : 'Patient'}
-    </h2>
-    
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div class="modal-overlay" on:click={closeModal} role="dialog" aria-labelledby="modal-title" aria-hidden={!isModalOpen}>
+    <div class="modal-content" on:click|stopPropagation tabindex="-1">
+      <button class="absolute top-2 right-2 text-white text-xl" on:click={closeModal} aria-label="Close Modal">X</button>
+      <h2 id="modal-title" class="text-lg font-bold mb-4">
+        Add Prescription for 
+        {selectedAppointment 
+          ? (() => {
+              const patientProfile = patientProfiles.find(profile => profile.id === selectedAppointment?.patientId);
+              return patientProfile ? `${patientProfile.name} ${patientProfile.lastName}` : 'Patient';
+            })() 
+          : 'Patient'}
+      </h2>
 
-    <form on:submit|preventDefault={submitPrescription}>
-      <div class="mb-4">
-        <label for="dateVisited" class="block text-sm font-medium mb-1">Date Visited</label>
-        <input id="dateVisited" type="date" bind:value={dateVisited} required class="border rounded p-2 w-full" />
+      <div class="flex items-center justify-between space-x-4">
+        <!-- Left Side (Prescription Form) -->
+        <form on:submit|preventDefault={submitPrescription} class="w-full md:w-1/2 space-y-4">
+          <div class="mb-4">
+            <label for="dateVisited" class="block text-sm font-medium mb-1">Date Visited</label>
+            <input id="dateVisited" type="date" bind:value={dateVisited} required class="border rounded p-2 w-full focus:ring-2 focus:ring-green-500" />
+          </div>
+
+          <div class="mb-4">
+            <label for="availableMedicine" class="block text-sm font-medium mb-1">Available Medicines</label>
+            <select id="availableMedicine" bind:value={selectedMedicine} class="border rounded p-2 w-full focus:ring-2 focus:ring-green-500">
+              <option value="" disabled>Select a medicine</option>
+              {#each availableMedicines as med}
+                <option value={med}>
+                  {med.name} (Stock: {med.quantity})
+                </option>
+              {/each}
+            </select>
+          </div>
+
+          <div class="mb-4">
+            <label for="qtyRefills" class="block text-sm font-medium mb-1">Qty/Refills</label>
+            <input id="qtyRefills" type="number" bind:value={qtyRefills} class="border rounded p-2 w-full focus:ring-2 focus:ring-green-500" />
+          </div>
+
+          <div class="mb-4">
+            <label for="instructions" class="block text-sm font-medium mb-1">Instructions</label>
+            <textarea id="instructions" bind:value={instructions} class="border rounded p-2 w-full focus:ring-2 focus:ring-green-500"></textarea>
+          </div>
+        </form>
+
+        <!-- Line Separator -->
+        <hr class="h-36 border-l mx-4" />
+
+        <!-- Right Side (Manual Medicine Input) -->
+        <div class="w-full md:w-1/2 space-y-4">
+          <h3 class="text-lg font-medium">Add Manual Medicine</h3>
+          <div class="mb-4">
+            <label for="manualMedication" class="block text-sm font-medium mb-1">Medication</label>
+            <input id="manualMedication" type="text" bind:value={medication} class="border rounded p-2 w-full focus:ring-2 focus:ring-green-500" />
+          </div>
+
+          <div class="mb-4">
+            <label for="manualQtyRefills" class="block text-sm font-medium mb-1">Qty/Refills</label>
+            <input id="manualQtyRefills" type="number" bind:value={qtyRefills} class="border rounded p-2 w-full focus:ring-2 focus:ring-green-500" />
+          </div>
+
+          <div class="mb-4">
+            <label for="manualInstructions" class="block text-sm font-medium mb-1">Instructions</label>
+            <textarea id="manualInstructions" bind:value={instructions} class="border rounded p-2 w-full focus:ring-2 focus:ring-green-500"></textarea>
+          </div>
+
+          <div class="mb-4">
+            <label for="prescriber" class="block text-sm font-medium mb-1">Prescriber</label>
+            <select
+              id="prescriber"
+              bind:value={prescriber}
+              class="border rounded p-2 w-full focus:ring-2 focus:ring-green-500"
+            >
+              <option value="Alfred Domingo">Alfred Domingo</option>
+              <option value="Fernalyn Domingo">Fernalyn Domingo</option>
+            </select>
+          </div>
+        </div>
       </div>
 
+      <!-- Submit Prescription -->
+      <div class="flex justify-end mt-6">
+        <button
+          type="button"
+          class="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500"
+          on:click={() => {
+            // Add both selected and manual medicines before submitting
+            addSelectedMedicine();
+            addManualMedicine();
 
-      <div class="mb-4">
-        <label for="availableMedicine" class="block text-sm font-medium mb-1">
-          Available Medicines
-        </label>
-        <select
-          id="availableMedicine"
-          bind:value={selectedMedicine}
-          class="border rounded p-2 w-full"
+            // Submit the prescription after adding medicines
+            submitPrescription();
+          }}
         >
-          <option value="" disabled>Select a medicine</option>
-          {#each availableMedicines as med}
-            <option value={med}>
-              {med.name} (Stock: {med.quantity})
-            </option>
-          {/each}
-        </select>
+          Submit Prescription
+        </button>
       </div>
-      
-
-<div class="mb-4">
-  <label for="qtyRefills" class="block text-sm font-medium mb-1">Qty/Refills</label>
-  <input
-    id="qtyRefills"
-    type="number"
-    bind:value={qtyRefills}
-    class="border rounded p-2 w-full"
-  />
-</div>
-
-<div class="mb-4">
-  <label for="instructions" class="block text-sm font-medium mb-1">Instructions</label>
-  <textarea
-    id="instructions"
-    bind:value={instructions}
-    class="border rounded p-2 w-full"
-  ></textarea>
-</div>
-
-<button type="button" class="bg-blue-500 text-white py-2 px-4 rounded" on:click={addSelectedMedicine}>
-  Add Selected Medicine
-</button>
-
-<!-- Manual Medicine Input -->
-<hr class="my-4" />
-
-<h3 class="text-lg font-medium">Add Manual Medicine</h3>
-<div class="mb-4">
-  <label for="manualMedication" class="block text-sm font-medium mb-1">Medication</label>
-  <input
-    id="manualMedication"
-    type="text"
-    bind:value={medication}
-    class="border rounded p-2 w-full"
-  />
-</div>
-
-<div class="mb-4">
-  <label for="manualQtyRefills" class="block text-sm font-medium mb-1">Qty/Refills</label>
-  <input
-    id="manualQtyRefills"
-    type="number"
-    bind:value={qtyRefills}
-    class="border rounded p-2 w-full"
-  />
-</div>
-
-<div class="mb-4">
-  <label for="manualInstructions" class="block text-sm font-medium mb-1">Instructions</label>
-  <textarea
-    id="manualInstructions"
-    bind:value={instructions}
-    class="border rounded p-2 w-full"
-  ></textarea>
-</div>
-
-<button type="button" class="bg-blue-500 text-white py-2 px-4 rounded" on:click={addManualMedicine}>
-  Add Manual Medicine
-</button>
-
-<!-- Display Added Medicines -->
-<h3 class="mt-4 font-medium">Prescription Medicines:</h3>
-<ul>
-  {#each prescriptionMedicines as med, index}
-    <li class="mt-2">
-      {index + 1}. {med.medicine} - {med.dosage} - {med.instructions}
-    </li>
-  {/each}
-</ul>
-
-<!-- Submit Prescription -->
-<button type="button" class="bg-green-500 text-white py-2 px-4 mt-4 rounded" on:click={submitPrescription}>
-  Submit Prescription
-</button>
-
-     
+    </div>
   </div>
-</div>
 {/if}
