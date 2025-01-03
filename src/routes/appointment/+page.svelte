@@ -13,6 +13,7 @@
 
   // Define types
   type Appointment = {
+    remarks: any;
 
     subServices: any;
 
@@ -122,7 +123,8 @@ const fetchAppointments = async () => {
         service: data.service,
         cancellationStatus: data.cancellationStatus,
         subServices: data.subServices,
-        cancelReason: data.cancelReason
+        cancelReason: data.cancelReason,
+        remarks: data.remarks || '',
     };
   });
 
@@ -405,22 +407,25 @@ const goToNextSection = () => {
   export const appointmentStore = writable<Appointment[]>([]);
 
 
-
-  export const handleCompletedAppointment = async (appointmentId: string, newStatus: string) => {
+  export const handleCompletedAppointment = async (appointmentId: string, newStatus: string, remarks: string) => {
   try {
+    // Ensure remarks is never undefined, default to an empty string if necessary
+    const remarksToSave = remarks || '';
+
     // Get a reference to the appointment document in Firestore
     const appointmentRef = doc(db, 'appointments', appointmentId);
 
-    // Update the status field in Firestore
+    // Update the status and remarks field in Firestore
     await updateDoc(appointmentRef, {
       status: newStatus === 'Completed' ? 'Completed' : 'Missed',
+      remarks: remarksToSave, // Save the remarks entered by the user
     });
 
     // Optimistically update the local state
     appointmentStore.update((prevAppointments: Appointment[]) =>
       prevAppointments.map((appointment: Appointment) =>
         appointment.id === appointmentId
-          ? { ...appointment, status: newStatus === 'Completed' ? 'Completed' : 'Missed' }
+          ? { ...appointment, status: newStatus === 'Completed' ? 'Completed' : 'Missed', remarks: remarksToSave }
           : appointment
       )
     );
@@ -433,6 +438,9 @@ const goToNextSection = () => {
   }
 };
 
+
+
+    
 </script>
 
 <style>
@@ -780,40 +788,56 @@ const goToNextSection = () => {
         </TabItem>
       </Tabs>
   
-      {#if filterAppointments(currentView).length > 0}
-        {#each filterAppointments(currentView) as appointment}
-          <div class="appointment-card">
-            <div class="appointment-details">
-              <p><strong>{appointment.date} at {appointment.time}</strong></p>
-              {#each patientProfiles as profile (profile.id)}
-                {#if profile.id === appointment.patientId}
-                  <p>{profile.name} {profile.lastName} ({profile.age} years old)</p>
-                {/if}
-              {/each}
-              <p>Service: {appointment.service}</p>
-            </div>
-            <div class="appointment-buttons">
-              <button on:click={() => openModal(appointment.id)} class="bg-green-500 text-white px-4 py-2 rounded">
-                Add Prescription
-              </button>
-              <button class="bg-blue-100" on:click={() => handleCompletedAppointment(appointment.id, 'Completed')}>
-                Completed
-              </button>
-              <button class="bg-red-100" on:click={() => handleCompletedAppointment(appointment.id, 'Missed')}>
-                Missed
-              </button>
-          
-              
-              
-  
-            </div>
-          </div>
+ {#if filterAppointments(currentView).length > 0}
+  {#each filterAppointments(currentView) as appointment}
+    <div class="appointment-card">
+      <div class="appointment-details">
+        <p><strong>{appointment.date} at {appointment.time}</strong></p>
+        {#each patientProfiles as profile (profile.id)}
+          {#if profile.id === appointment.patientId}
+            <p>{profile.name} {profile.lastName} ({profile.age} years old)</p>
+          {/if}
         {/each}
-      {:else}
-        <div class="no-appointments">
-          <p>No appointments for the selected period.</p>
-        </div>
-      {/if}
+        <p>Service: {appointment.service}</p>
+
+        <!-- Input for remarks directly below the service -->
+       <!-- Input for remarks directly below the service -->
+       <div>
+        <label for="remarks-{appointment.id}">Remarks:</label>
+        <input
+          type="text"
+          id="remarks-{appointment.id}"
+          bind:value={appointment.remarks}
+          placeholder="Enter remarks here"
+        />
+      </div>
+    </div>
+     
+    <div class="appointment-buttons">
+      <button on:click={() => openModal(appointment.id)} class="bg-green-100">
+        Prescription
+      </button>
+      <button
+        class="bg-blue-100"
+        on:click={() => handleCompletedAppointment(appointment.id, 'Completed', appointment.remarks || '')}
+      >
+        Completed
+      </button>
+      <button
+        class="bg-red-100"
+        on:click={() => handleCompletedAppointment(appointment.id, 'Missed', appointment.remarks || '')}
+      >
+        Missed
+      </button>
+    </div>
+  </div>
+{/each}
+{:else}
+<div class="no-appointments">
+  <p>No appointments for the selected period.</p>
+</div>
+{/if}
+
     </div>
   </div>
   
@@ -879,9 +903,6 @@ const goToNextSection = () => {
             <option value="Fernalyn Domingo">Fernalyn Domingo</option>
           </select>
         </div>
-     
-    
-       
       </div>
  
     <!-- Submit Prescription -->
