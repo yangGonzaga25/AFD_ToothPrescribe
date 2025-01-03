@@ -14,6 +14,7 @@
     // Update toggleSidebar to save the state
     toggleSidebar = () => {
         isCollapsed = !isCollapsed;
+        // @ts-ignore
         sessionStorage.setItem('isCollapsed', isCollapsed); // Save the state
     };
 </script>
