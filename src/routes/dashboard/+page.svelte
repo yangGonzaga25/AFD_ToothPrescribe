@@ -2,6 +2,8 @@
     import Sidebar from '../sidenav/+page.svelte'; // Import the sidebar component
     import { getFirestore, collection, getDocs, query, where, updateDoc, doc, getDoc } from "firebase/firestore";
     import { initializeApp, getApps, getApp } from "firebase/app";
+    import Chart from 'chart.js/auto';
+    import { onMount } from 'svelte';  // <-- Make sure you have this line to import onMount
 
     // Firebase initialization
     import { firebaseConfig } from "$lib/firebaseConfig";
@@ -36,6 +38,12 @@
     // State to handle the current view for appointments
     let isViewingAppointments = false;
 
+    let appointmentData = [];
+    let dateLabels: string[] = [];
+let totalPatientsPerDay: number[] = []; // Line graph data (number of patients)
+let newAppointmentsPerDay: number[] = []; // Bar graph data (number of appointments)
+
+
     interface Patient {
         name: string;       // First name
         lastName: string;   // Last name
@@ -59,6 +67,117 @@
         const day = String(today.getDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
     }
+
+    async function fetchGraphData() {
+    try {
+        const appointmentsCollection = collection(db, "appointments");
+        const patientCollection = collection(db, "patientProfiles");
+
+        const appointmentDocs = await getDocs(appointmentsCollection);
+        const patientDocs = await getDocs(patientCollection);
+
+        const appointmentCountByDate: Record<string, number> = {};
+        const patientCountByDate: Record<string, number> = {};
+
+        // Loop through appointments and group them by date
+        appointmentDocs.forEach((doc) => {
+            const data = doc.data();
+            const date = data.date; // Assuming the date is stored in a field called "date"
+            if (appointmentCountByDate[date]) {
+                appointmentCountByDate[date]++;
+            } else {
+                appointmentCountByDate[date] = 1;
+            }
+        });
+
+        // Loop through patients and group them by registration date
+        patientDocs.forEach((doc) => {
+            const data = doc.data();
+            const date = data.registrationDate; // Assuming patients have a "registrationDate" field
+            if (patientCountByDate[date]) {
+                patientCountByDate[date]++;
+            } else {
+                patientCountByDate[date] = 1;
+            }
+        });
+
+        // Now fill the data arrays for the charts
+        dateLabels = Object.keys(appointmentCountByDate); // Dates are the labels
+        newAppointmentsPerDay = Object.values(appointmentCountByDate); // Count of new appointments per day
+        totalPatientsPerDay = Object.values(patientCountByDate); // Count of total patients per day
+    } catch (error) {
+        console.error("Error fetching data:", error);
+    }
+}
+
+
+function createCharts() {
+    // Sort dateLabels in ascending order based on date
+    const sortedDates = dateLabels.sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+
+    // Bar Chart for New Appointments
+    new Chart(document.getElementById('barChart') as HTMLCanvasElement, {
+        type: 'bar', // Specify the chart type
+        data: {
+            labels: sortedDates, // Use sorted date as labels
+            datasets: [{
+                label: 'New Appointments',
+                data: newAppointmentsPerDay,
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        // Ensure that only whole numbers are shown
+                        stepSize: 1,
+                        callback: function(value) {
+                            if (Number.isInteger(value)) {
+                                return value; // Only return whole numbers
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+        // Line Chart for Patients
+        new Chart(document.getElementById('lineChart') as HTMLCanvasElement, {
+        type: 'line', // Specify the chart type
+        data: {
+            labels: sortedDates, // Use the sorted date labels
+            datasets: [{
+                label: 'Total Patients',
+                data: totalPatientsPerDay,
+                backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                borderColor: 'rgba(153, 102, 255, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        // Ensure that only whole numbers are shown
+                        stepSize: 1,
+                        callback: function(value) {
+                            if (Number.isInteger(value)) {
+                                return value; // Only return whole numbers
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
 
     function toggleAppointments() {
         isViewingAppointments = !isViewingAppointments; // Toggle the view on/off
@@ -129,9 +248,22 @@
             console.error("Error fetching appointments:", error);
         }
     }
+    
 
     // Fetch data on component mount
     fetchDashboardData();
+    
+    onMount(async () => {
+    // Fetch dashboard data from Firebase
+    await fetchDashboardData();
+
+    // Fetch the data for graphs
+    await fetchGraphData();
+
+    // Create the charts
+    createCharts();
+  });
+
 </script>
 
 <style>
@@ -204,6 +336,14 @@
         margin: 0;
         color: #555;
     }
+    .chart {
+    margin-left: 20px; /* Adjust this value to move the content to the left */
+    width: 80%; /* Adjust the width as needed */
+    height: 500px; /* Adjust the height as needed */
+    padding: 20px; /* Adds padding inside the container */
+}
+
+
 </style>
 
 <div class="dashboard">
@@ -232,6 +372,16 @@
                 <div class="text">
                     <h3>{stats.totalPrescriptions}</h3>
                     <p>Total Prescriptions</p>
+                </div>
+            </div>
+            <div class="chart">
+                <div>
+                    <h2>New Appointments</h2>
+                    <canvas id="barChart"></canvas>
+                </div>
+                <div>
+                    <h2>Total Patients</h2>
+                    <canvas id="lineChart"></canvas>
                 </div>
             </div>
         </div>
