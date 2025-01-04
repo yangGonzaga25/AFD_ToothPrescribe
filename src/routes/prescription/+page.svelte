@@ -7,6 +7,7 @@
     import { getFirestore, collection, updateDoc, getDocs, doc } from 'firebase/firestore'; 
     import { goto } from '$app/navigation'; 
     import { EyeOutline } from 'flowbite-svelte-icons'; 
+    import Swal from "sweetalert2";
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
@@ -116,34 +117,99 @@ function switchCategory(category: 'Active' | 'Archived') {
     searchTerm = ''; // Reset search term when switching categories
     filterAndSortPatients();
 }
-    async function archivePatient(id: string) {
-        try {
+async function archivePatient(id: string) {
+    try {
+        // Show confirmation dialog
+        const result = await Swal.fire({
+            title: "Are you sure?",
+            text: "Do you want to archive this patient?",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonColor: "#3085d6",
+            cancelButtonColor: "#d33",
+            confirmButtonText: "Yes, archive it!",
+        });
+
+        if (result.isConfirmed) {
+            // Proceed to archive the patient
             const patientRef = doc(db, "patientProfiles", id);
             await updateDoc(patientRef, { isArchived: true });
+
+            // Update local data
             const patientIndex = patients.findIndex(patient => patient.id === id);
             if (patientIndex !== -1) {
                 patients[patientIndex].isArchived = true;
                 filterPatientsByCategory();
             }
-        } catch (error) {
-            console.error("Error archiving patient:", error);
-        }
-    }
-    
-    async function unarchivePatient(id: string) {
-    try {
-        const patientRef = doc(db, "patientProfiles", id);
-        await updateDoc(patientRef, { isArchived: false });
-        const patientIndex = patients.findIndex(patient => patient.id === id);
-        if (patientIndex !== -1) {
-            patients[patientIndex].isArchived = false;
-            filterPatientsByCategory();
+
+            // Show success alert
+            await Swal.fire({
+                title: "Archived!",
+                text: "The patient has been archived.",
+                icon: "success",
+                confirmButtonText: "Okay",
+                confirmButtonColor: "#3085d6",
+            });
         }
     } catch (error) {
+        // Show error alert
+        Swal.fire({
+            title: "Error",
+            text: "There was an issue archiving the patient. Please try again later.",
+            icon: "error",
+            confirmButtonColor: "#3085d6",
+        });
+
+        console.error("Error archiving patient:", error);
+    }
+}
+    
+async function unarchivePatient(id: string) {
+    try {
+        // Show confirmation dialog
+        const result = await Swal.fire({
+            title: "Are you sure?",
+            text: "Do you want to unarchive this patient?",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonColor: "#3085d6",
+            cancelButtonColor: "#d33",
+            confirmButtonText: "Yes, unarchive it!",
+        });
+
+        if (result.isConfirmed) {
+            // Proceed to unarchive the patient
+            const patientRef = doc(db, "patientProfiles", id);
+            await updateDoc(patientRef, { isArchived: false });
+
+            // Update local data
+            const patientIndex = patients.findIndex(patient => patient.id === id);
+            if (patientIndex !== -1) {
+                patients[patientIndex].isArchived = false;
+                filterPatientsByCategory();
+            }
+
+            // Show success alert
+            await Swal.fire({
+                title: "Unarchived!",
+                text: "The patient has been unarchived.",
+                icon: "success",
+                confirmButtonText: "Okay",
+                confirmButtonColor: "#3085d6",
+            });
+        }
+    } catch (error) {
+        // Show error alert
+        Swal.fire({
+            title: "Error",
+            text: "There was an issue unarchiving the patient. Please try again later.",
+            icon: "error",
+            confirmButtonColor: "#3085d6",
+        });
+
         console.error("Error unarchiving patient:", error);
     }
 }
-
 
     // Fetch prescribed patients and map to patient profiles
     async function fetchPrescribedPatients() {
@@ -220,7 +286,6 @@ function switchCategory(category: 'Active' | 'Archived') {
         currentPatient = {};
     }
 </script>
-
 
 <style>
     @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css');
@@ -435,21 +500,50 @@ function switchCategory(category: 'Active' | 'Archived') {
     max-width: 1200px;
     margin: auto;
 }
+ /* Wrapper for search input and icon */
+ .search-input-wrapper {
+    position: relative;
+    width: 80%; /* Set the width to 80% */
+    margin-left: 2%; /* Move it slightly from the left */
+    flex: none; /* Prevent flex from resizing */
+}
 
-.search-input {
-    flex: 1;
-    padding: 15px;
-    border-radius: 8px;
+/* Search Icon */
+.search-icon {
+    position: absolute;
+    top: 50%;
+    left: 15px;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: #888;
+}
+
+/* Search Input */
+.search-input-modern {
+    width: 100%;
+    padding: 12px 12px 12px 45px; /* Space for the icon */
+    border-radius: 50px;
     border: 1px solid #ccc;
     font-size: 1rem;
-    transition: border-color 0.3s ease;
+    transition: all 0.3s ease;
+    background-color: #f9f9f9;
     box-sizing: border-box;
+    color: #333;
 }
 
-.search-input:focus {
+.search-input-modern:focus {
     border-color: #08B8F3;
+    box-shadow: 0 0 5px rgba(8, 184, 243, 0.5);
     outline: none;
 }
+
+/* Hover Effect */
+.search-input-modern:hover {
+    border-color: #08B8F3;
+}
+
 
 .sort-dropdown {
     padding: 15px;
@@ -484,7 +578,56 @@ function switchCategory(category: 'Active' | 'Archived') {
     .category-button.active {
         background-color: #4CAF50;
     }
-    
+    /* Modal Table Container */
+.modal-table-container {
+    overflow-x: auto; /* Adds horizontal scrolling if content overflows */
+    margin-top: 1rem;
+}
+
+/* Modal Table Styles */
+.modal-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: center;
+    font-size: 0.9rem;
+    background-color: white;
+}
+
+.modal-table th, 
+.modal-table td {
+    border: 1px solid #ccc;
+    padding: 8px;
+}
+
+.modal-table th {
+    background-color: #08B8F3;
+    color: white;
+    font-weight: bold;
+}
+
+.modal-table tbody tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .modal-content {
+        padding: 1rem;
+    }
+
+    .modal-table th,
+    .modal-table td {
+        font-size: 0.8rem;
+        padding: 6px;
+    }
+}
+.action-icon {
+    width: 20px; /* Adjust size */
+    height: 20px;
+    margin: 0 5px; /* Add some spacing if needed */
+    vertical-align: middle; /* Align with text if present */
+}
+
 </style>
 <div class="dashboard">
     <Sidebar {isCollapsed} {toggleSidebar} {logout} />
@@ -509,13 +652,29 @@ function switchCategory(category: 'Active' | 'Archived') {
      
         <!-- Search Bar -->
         <div class="search-and-sort-container">
-            <input
-                type="text"
-                placeholder="Search patients..."
-                bind:value={searchTerm}
-                on:input={filterAndSortPatients}
-                class="search-input"
-            />
+            <div class="search-input-wrapper">
+                <svg
+                    class="search-icon"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                >
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M21 21l-4.35-4.35m-5.15 0a7 7 0 100-14 7 7 0 000 14z"
+                    />
+                </svg>
+                <input
+                    type="text"
+                    placeholder="Search patients..."
+                    bind:value={searchTerm}
+                    on:input={filterAndSortPatients}
+                    class="search-input-modern"
+                />
+            </div>
             <select bind:value={sortDirection} on:change={filterAndSortPatients} class="sort-dropdown">
                 <option value="asc">Sort by Name: A–Z</option>
                 <option value="desc">Sort by Name: Z–A</option>
@@ -552,13 +711,17 @@ function switchCategory(category: 'Active' | 'Archived') {
                         <TableBodyCell>{patient.age}</TableBodyCell>
                         <TableBodyCell>
                             {#if currentCategory === 'Archived'}
-                                <Button on:click={() => unarchivePatient(patient.id)} >Unarchive </Button>
+                            <Button on:click={() => unarchivePatient(patient.id)}>
+                                <img src="./images/unarchive.png" alt="Unarchive" class="action-icon" />
+                            </Button>
                              {/if}
                             {#if currentCategory === 'Active'}
-                                <Button on:click={() => archivePatient(patient.id)}>Archive</Button>
+                            <Button on:click={() => archivePatient(patient.id)}>
+                                <img src="./images/archive.png" alt="Archive" class="action-icon" />
+                            </Button>
                             {/if}
                             <Button on:click={() => openPrescriptionModal(patient)}>
-                                View Prescriptions
+                                <img src="./images/prescription.png" alt="View Prescriptions" class="action-icon" />
                             </Button>
                         </TableBodyCell>
                     </TableBodyRow>
@@ -569,55 +732,57 @@ function switchCategory(category: 'Active' | 'Archived') {
         
     </div>
 </div>
-        <!-- Modal Content -->
-        {#if showModal}
-            <div class="modal fixed inset-0 bg-gray-500 bg-opacity-50 flex justify-center items-center z-50">
-                <div class="modal-content bg-white p-6 rounded-lg shadow-lg w-3/4 md:w-1/2">
-                    <h3 class="text-xl font-semibold mb-4">Prescription Details</h3>
-                    <p><strong>Patient Name:</strong> {currentPatient.fullName}</p>
-                    <p><strong>Address:</strong> {currentPatient.address}</p>
-                    <p><strong>Phone:</strong> {currentPatient.phone}</p>
-                    <p><strong>Age:</strong> {currentPatient.age}</p>
-        
-                    <!-- Display all prescriptions in a table -->
-                    <Table shadow style="width: 100%; height: auto;">
-                        <TableHead style="background-color: #08B8F3; color: white;">
-                            <TableHeadCell class="border border-gray-300">Instructions</TableHeadCell>
-                            <TableHeadCell class="border border-gray-300">Medications</TableHeadCell>
-                            <TableHeadCell class="border border-gray-300">Date Visited</TableHeadCell>
-                            <TableHeadCell class="border border-gray-300">Prescriber</TableHeadCell>
-                            <TableHeadCell class="border border-gray-300">Qty Refills</TableHeadCell>
-                        </TableHead>
-                        <TableBody tableBodyClass="divide-y">
-                            {#each currentPatient.prescriptions as prescription}
-                                <TableBodyRow class="table-body-row">
-                                    <TableBodyCell class="text-center">{prescription.instructions}</TableBodyCell>
-                                    <TableBodyCell class="text-center">{prescription.medications}</TableBodyCell>
-                                    <TableBodyCell class="text-center">{prescription.dateVisited}</TableBodyCell>
-                                    <TableBodyCell class="text-center">{prescription.prescriber}</TableBodyCell>
-                                    <TableBodyCell class="text-center">{prescription.qtyRefills}</TableBodyCell>
-                                </TableBodyRow>
-                            {/each}
-                        </TableBody>
-                    </Table>
-        
-                    <!-- Add New Prescription Button -->
-                    <button
-                        on:click={() => goto(`/add-prescription1/${currentPatient.id}`)}
-                        class="bg-green-500 text-white py-2 px-4 rounded mt-4 hover:bg-green-600"
-                    >
-                        Add New Prescription
-                    </button>
-        
-                    <!-- Close Button -->
-                    <button 
-                        on:click={closeModal} 
-                        class="bg-red-500 text-white py-2 px-4 rounded mt-4 hover:bg-red-600"
-                    >
-                        Close
-                    </button>
-                </div>
+       <!-- Modal Content -->
+{#if showModal}
+<div class="modal fixed inset-0 bg-gray-500 bg-opacity-50 flex justify-center items-center z-50">
+    <div class="modal-content bg-white p-6 rounded-lg shadow-lg w-11/12 md:w-2/3 lg:w-1/2">
+        <h3 class="text-xl font-semibold mb-4">Prescription Details</h3>
+        <p><strong>Patient Name:</strong> {currentPatient.fullName}</p>
+        <p><strong>Address:</strong> {currentPatient.address}</p>
+        <p><strong>Phone:</strong> {currentPatient.phone}</p>
+        <p><strong>Age:</strong> {currentPatient.age}</p>
+
+        <!-- Check if prescriptions exist -->
+        {#if currentPatient.prescriptions && currentPatient.prescriptions.length > 0}
+            <!-- Display all prescriptions in a table -->
+            <div class="modal-table-container">
+                <table class="modal-table">
+                    <thead>
+                        <tr>
+                            <th>Instructions</th>
+                            <th>Medications</th>
+                            <th>Date Visited</th>
+                            <th>Prescriber</th>
+                            <th>Qty Refills</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {#each currentPatient.prescriptions as prescription}
+                        <tr>
+                            <td>{prescription.instructions}</td>
+                            <td>{prescription.medications}</td>
+                            <td>{prescription.dateVisited}</td>
+                            <td>{prescription.prescriber}</td>
+                            <td>{prescription.qtyRefills}</td>
+                        </tr>
+                        {/each}
+                    </tbody>
+                </table>
             </div>
-            
+        {:else}
+            <!-- Message if no prescriptions found -->
+            <p class="text-center text-gray-500 mt-4">No prescription issued for this patient.</p>
         {/if}
+
+        <!-- Close Button -->
+        <button 
+            on:click={closeModal} 
+            class="bg-red-500 text-white py-2 px-4 rounded mt-4 hover:bg-red-600"
+        >
+            Close
+        </button>
+    </div>
+</div>
+{/if}
+
     </div>
