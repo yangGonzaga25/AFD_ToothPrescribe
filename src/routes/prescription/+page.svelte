@@ -272,8 +272,6 @@ async function unarchivePatient(id: string) {
         }
     }
 
-
-
     // Open the modal to view prescriptions of the selected patient
     function openPrescriptionModal(patient: any) {
         currentPatient = prescribedPatients.find(p => p.id === patient.id) || {};
@@ -287,348 +285,7 @@ async function unarchivePatient(id: string) {
     }
 </script>
 
-<style>
-    @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css');
-    :global(.dashboard) {
-        display: flex;
-        height: 100vh;
-        overflow: hidden;
-        font-family: 'Roboto', sans-serif;
-    }
 
-   :global(.content) {
-        flex-grow: 1;
-        overflow: auto;
-        margin-left: -10rem;
-        transition: margin-left 0.3s ease;
-        padding: 20px;
-       
-    }
-    /* Header Styling */
-    :global(.content-header) {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 20px;
-        font-weight: 600;
-    }
-
-    /* Table Container */
-    :global(.table-container) {
-        border-radius: 10px;
-        padding: 30px;
-        overflow-x: auto;
-        width: 100%;
-        max-width: 1200px;
-        margin: auto;
-        height: auto;
-    }
-
-    /* Search Bar */
-    :global(.search-bar) {
-        margin-bottom: 30px;
-        width: 100%;
-    }
-
-    :global(.search-input) {
-        width: 100%;
-        padding: 15px;
-        border-radius: 8px;
-        border: 1px solid #ccc;
-        font-size: 1rem;
-        box-sizing: border-box;
-        transition: border-color 0.3s ease;
-    }
-
-    :global(.search-input:focus) {
-        border-color: #08B8F3;
-        outline: none;
-    }
-
-    /* Pagination */
-    :global(.pagination) {
-        display: flex;
-        justify-content: flex-end;
-        margin-top: 20px;
-    }
-
-    :global(.pagination button) {
-        padding: 10px 16px;
-        margin: 0 5px;
-        font-size: 1.1rem;
-        border: 1px solid #ddd;
-        border-radius: 5px;
-        background-color: #08B8F3;
-        color: white;
-        cursor: pointer;
-        transition: background-color 0.3s ease;
-    }
-
-   
-
-    :global(.pagination button:disabled) {
-        background-color: #d6d6d6;
-        cursor: not-allowed;
-    }
-
-    /* Table Styling */
-    :global(table) {
-        width: 100%;
-        border-collapse: collapse;
-    }
-
-    :global(th), :global(td) {
-        padding: 15px;
-        text-align: left;
-        font-size: 1rem;
-        border-bottom: 1px solid #ddd;
-    }
-
-    :global(th) {
-        background-color: #08B8F3; /* Bright blue for table headers */
-        color: white;
-        font-weight: bold;
-    }
-
-    /* Alternate Row Colors */
-    :global(tr:nth-child(odd)) {
-        background-color: #ffffff;
-    }
-
-    :global(tr:nth-child(even)) {
-        background-color: #f0f8ff; /* Soft blue for alternate rows */
-    }
-
-    /* Hover Effect on Rows */
-    :global(tr:hover) {
-        background-color: #f1f1f1;
-        cursor: pointer;
-    }
-
-    /* Container Styling */
-    :global(.container) {
-        padding: 20px;
-        max-width: 100%;
-        margin: auto;
-        margin-top: 40px;
-        border-radius: 10px;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-        background-color: #fff;
-    }
-
-    /* Logo Styling */
-    :global(.logo-img) {
-        width: 50px;
-        height: auto;
-        margin-right: 15px;
-    }
-
-    /* Formal Text Styling */
-    :global(.text-sm) {
-        font-size: 0.95rem;
-        color: #333;
-    }
-
-    :global(h1, h2) {
-        font-size: 1.6rem;
-        color: #333;
-        margin: 10px 0;
-        font-weight: 600;
-    }
-
-    /* Text Styling for Clinic Info */
-    :global(.clinic-info) {
-        font-size: 0.95rem;
-        color: #666;
-    }
-
-    :global(.clinic-info p) {
-        margin: 5px 0;
-    }
-
-    /* Footer */
-    :global(.footer) {
-        margin-top: 50px;
-        padding: 10px;
-        text-align: center;
-        font-size: 0.85rem;
-        color: #888;
-    }
-
-
-    button {
-        padding: 6px 12px;
-        background-color: #4CAF50;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-    }
-
-    button:hover {
-        background-color: #45a049;
-    }
-
-    /* Modal styles */
-    .modal {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.5);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-    }
-
-    .modal-content {
-        background-color: white;
-        padding: 20px;
-        border-radius: 5px;
-        max-width: 600px;
-        width: 100%;
-    }
-    
-
-.search-and-sort-container {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 20px;
-    width: 100%;
-    max-width: 1200px;
-    margin: auto;
-}
- /* Wrapper for search input and icon */
- .search-input-wrapper {
-    position: relative;
-    width: 80%; /* Set the width to 80% */
-    margin-left: 2%; /* Move it slightly from the left */
-    flex: none; /* Prevent flex from resizing */
-}
-
-/* Search Icon */
-.search-icon {
-    position: absolute;
-    top: 50%;
-    left: 15px;
-    transform: translateY(-50%);
-    width: 20px;
-    height: 20px;
-    fill: none;
-    stroke: #888;
-}
-
-/* Search Input */
-.search-input-modern {
-    width: 100%;
-    padding: 12px 12px 12px 45px; /* Space for the icon */
-    border-radius: 50px;
-    border: 1px solid #ccc;
-    font-size: 1rem;
-    transition: all 0.3s ease;
-    background-color: #f9f9f9;
-    box-sizing: border-box;
-    color: #333;
-}
-
-.search-input-modern:focus {
-    border-color: #08B8F3;
-    box-shadow: 0 0 5px rgba(8, 184, 243, 0.5);
-    outline: none;
-}
-
-/* Hover Effect */
-.search-input-modern:hover {
-    border-color: #08B8F3;
-}
-
-
-.sort-dropdown {
-    padding: 15px;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    font-size: 1rem;
-    background-color: #fff;
-    color: #333;
-    transition: border-color 0.3s ease;
-}
-
-.sort-dropdown:focus {
-    border-color: #08B8F3;
-    outline: none;
-}
-.category-switch {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 20px;
-    }
-
-    .category-button {
-        padding: 10px 20px;
-        background-color: #08B8F3;
-        color: white;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        transition: background-color 0.3s ease;
-    }
-
-    .category-button.active {
-        background-color: #4CAF50;
-    }
-    /* Modal Table Container */
-.modal-table-container {
-    overflow-x: auto; /* Adds horizontal scrolling if content overflows */
-    margin-top: 1rem;
-}
-
-/* Modal Table Styles */
-.modal-table {
-    width: 100%;
-    border-collapse: collapse;
-    text-align: center;
-    font-size: 0.9rem;
-    background-color: white;
-}
-
-.modal-table th, 
-.modal-table td {
-    border: 1px solid #ccc;
-    padding: 8px;
-}
-
-.modal-table th {
-    background-color: #08B8F3;
-    color: white;
-    font-weight: bold;
-}
-
-.modal-table tbody tr:nth-child(even) {
-    background-color: #f9f9f9;
-}
-
-/* Responsive Adjustments */
-@media (max-width: 768px) {
-    .modal-content {
-        padding: 1rem;
-    }
-
-    .modal-table th,
-    .modal-table td {
-        font-size: 0.8rem;
-        padding: 6px;
-    }
-}
-.action-icon {
-    width: 20px; /* Adjust size */
-    height: 20px;
-    margin: 0 5px; /* Add some spacing if needed */
-    vertical-align: middle; /* Align with text if present */
-}
-
-</style>
 <div class="dashboard">
     <Sidebar {isCollapsed} {toggleSidebar} {logout} />
 
@@ -786,3 +443,345 @@ async function unarchivePatient(id: string) {
 {/if}
 
     </div>
+    <style>
+        @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css');
+        :global(.dashboard) {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            font-family: 'Roboto', sans-serif;
+        }
+    
+       :global(.content) {
+            flex-grow: 1;
+            overflow: auto;
+            margin-left: -10rem;
+            transition: margin-left 0.3s ease;
+            padding: 20px;
+           
+        }
+        /* Header Styling */
+        :global(.content-header) {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+    
+        /* Table Container */
+        :global(.table-container) {
+            border-radius: 10px;
+            padding: 30px;
+            overflow-x: auto;
+            width: 100%;
+            max-width: 1200px;
+            margin: auto;
+            height: auto;
+        }
+    
+        /* Search Bar */
+        :global(.search-bar) {
+            margin-bottom: 30px;
+            width: 100%;
+        }
+    
+        :global(.search-input) {
+            width: 100%;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            font-size: 1rem;
+            box-sizing: border-box;
+            transition: border-color 0.3s ease;
+        }
+    
+        :global(.search-input:focus) {
+            border-color: #08B8F3;
+            outline: none;
+        }
+    
+        /* Pagination */
+        :global(.pagination) {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+    
+        :global(.pagination button) {
+            padding: 10px 16px;
+            margin: 0 5px;
+            font-size: 1.1rem;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #08B8F3;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+    
+       
+    
+        :global(.pagination button:disabled) {
+            background-color: #d6d6d6;
+            cursor: not-allowed;
+        }
+    
+        /* Table Styling */
+        :global(table) {
+            width: 100%;
+            border-collapse: collapse;
+        }
+    
+        :global(th), :global(td) {
+            padding: 15px;
+            text-align: left;
+            font-size: 1rem;
+            border-bottom: 1px solid #ddd;
+        }
+    
+        :global(th) {
+            background-color: #08B8F3; /* Bright blue for table headers */
+            color: white;
+            font-weight: bold;
+        }
+    
+        /* Alternate Row Colors */
+        :global(tr:nth-child(odd)) {
+            background-color: #ffffff;
+        }
+    
+        :global(tr:nth-child(even)) {
+            background-color: #f0f8ff; /* Soft blue for alternate rows */
+        }
+    
+        /* Hover Effect on Rows */
+        :global(tr:hover) {
+            background-color: #f1f1f1;
+            cursor: pointer;
+        }
+    
+        /* Container Styling */
+        :global(.container) {
+            padding: 20px;
+            max-width: 100%;
+            margin: auto;
+            margin-top: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            background-color: #fff;
+        }
+    
+        /* Logo Styling */
+        :global(.logo-img) {
+            width: 50px;
+            height: auto;
+            margin-right: 15px;
+        }
+    
+        /* Formal Text Styling */
+        :global(.text-sm) {
+            font-size: 0.95rem;
+            color: #333;
+        }
+    
+        :global(h1, h2) {
+            font-size: 1.6rem;
+            color: #333;
+            margin: 10px 0;
+            font-weight: 600;
+        }
+    
+        /* Text Styling for Clinic Info */
+        :global(.clinic-info) {
+            font-size: 0.95rem;
+            color: #666;
+        }
+    
+        :global(.clinic-info p) {
+            margin: 5px 0;
+        }
+    
+        /* Footer */
+        :global(.footer) {
+            margin-top: 50px;
+            padding: 10px;
+            text-align: center;
+            font-size: 0.85rem;
+            color: #888;
+        }
+    
+    
+        button {
+            padding: 6px 12px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+    
+        button:hover {
+            background-color: #45a049;
+        }
+    
+        /* Modal styles */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+    
+        .modal-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+            max-width: 600px;
+            width: 100%;
+        }
+        
+    
+    .search-and-sort-container {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 20px;
+        width: 100%;
+        max-width: 1200px;
+        margin: auto;
+    }
+     /* Wrapper for search input and icon */
+     .search-input-wrapper {
+        position: relative;
+        width: 80%; /* Set the width to 80% */
+        margin-left: 2%; /* Move it slightly from the left */
+        flex: none; /* Prevent flex from resizing */
+    }
+    
+    /* Search Icon */
+    .search-icon {
+        position: absolute;
+        top: 50%;
+        left: 15px;
+        transform: translateY(-50%);
+        width: 20px;
+        height: 20px;
+        fill: none;
+        stroke: #888;
+    }
+    
+    /* Search Input */
+    .search-input-modern {
+        width: 100%;
+        padding: 12px 12px 12px 45px; /* Space for the icon */
+        border-radius: 50px;
+        border: 1px solid #ccc;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+        background-color: #f9f9f9;
+        box-sizing: border-box;
+        color: #333;
+    }
+    
+    .search-input-modern:focus {
+        border-color: #08B8F3;
+        box-shadow: 0 0 5px rgba(8, 184, 243, 0.5);
+        outline: none;
+    }
+    
+    /* Hover Effect */
+    .search-input-modern:hover {
+        border-color: #08B8F3;
+    }
+    
+    
+    .sort-dropdown {
+        padding: 15px;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        font-size: 1rem;
+        background-color: #fff;
+        color: #333;
+        transition: border-color 0.3s ease;
+    }
+    
+    .sort-dropdown:focus {
+        border-color: #08B8F3;
+        outline: none;
+    }
+    .category-switch {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+    
+        .category-button {
+            padding: 10px 20px;
+            background-color: #08B8F3;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+    
+        .category-button.active {
+            background-color: #4CAF50;
+        }
+        /* Modal Table Container */
+    .modal-table-container {
+        overflow-x: auto; /* Adds horizontal scrolling if content overflows */
+        margin-top: 1rem;
+    }
+    
+    /* Modal Table Styles */
+    .modal-table {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: center;
+        font-size: 0.9rem;
+        background-color: white;
+    }
+    
+    .modal-table th, 
+    .modal-table td {
+        border: 1px solid #ccc;
+        padding: 8px;
+    }
+    
+    .modal-table th {
+        background-color: #08B8F3;
+        color: white;
+        font-weight: bold;
+    }
+    
+    .modal-table tbody tr:nth-child(even) {
+        background-color: #f9f9f9;
+    }
+    
+    /* Responsive Adjustments */
+    @media (max-width: 768px) {
+        .modal-content {
+            padding: 1rem;
+        }
+    
+        .modal-table th,
+        .modal-table td {
+            font-size: 0.8rem;
+            padding: 6px;
+        }
+    }
+    .action-icon {
+        width: 20px; /* Adjust size */
+        height: 20px;
+        margin: 0 5px; /* Add some spacing if needed */
+        vertical-align: middle; /* Align with text if present */
+    }
+    
+    </style>

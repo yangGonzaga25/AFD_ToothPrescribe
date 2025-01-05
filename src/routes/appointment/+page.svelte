@@ -571,10 +571,7 @@ const goToNextSection = () => {
     font-weight: bold;
   }
 
-  .patient-age-service {
-    font-size: 0.75rem;
-    color: gray;
-  }
+ 
 
   .service {
     margin-top: 4px;
