@@ -814,15 +814,16 @@ const goToNextSection = () => {
               <div class="patient-info">
                 {#each patientProfiles as profile (profile.id)}
                   {#if profile.id === appointment.patientId}
-                    <div class="patient-name">
-                      <p>{profile.name} {profile.lastName}</p>
-                      <p class="patient-age-service">{profile.age} years old</p>
-                      <p class="text-sm text-gray-500">{appointment.date}</p>
-                    </div>
-    
-                    <div class="service">
-                      <p class="text-sm text-gray-500">Service: {appointment.service}</p>
-                    </div>
+                  <div class="patient-details">
+                    <p class="patient-name">{profile.name} {profile.lastName}</p>
+                    <p class="patient-age">{profile.age} years old</p>
+                    <p class="appointment-details">{appointment.date} at {appointment.time}</p>
+                    <p class="service">
+                      Service: {appointment.service}
+                      {appointment.subServices && appointment.subServices.length > 0 ? ` | Sub-services: ${appointment.subServices.join(', ')}` : ''}
+                    </p>
+                    
+                  </div>
                   {/if}
                 {/each}
               </div>

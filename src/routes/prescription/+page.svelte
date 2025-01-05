@@ -296,7 +296,14 @@ async function unarchivePatient(id: string) {
         font-family: 'Roboto', sans-serif;
     }
 
-
+   :global(.content) {
+        flex-grow: 1;
+        overflow: auto;
+        margin-left: -10rem;
+        transition: margin-left 0.3s ease;
+        padding: 20px;
+       
+    }
     /* Header Styling */
     :global(.content-header) {
         display: flex;
@@ -483,13 +490,6 @@ async function unarchivePatient(id: string) {
         width: 100%;
     }
     
-    search-bar {
-    flex: 1;
-    padding: 8px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-}
-
 
 .search-and-sort-container {
     display: flex;
