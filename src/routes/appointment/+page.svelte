@@ -817,8 +817,13 @@ const goToNextSection = () => {
                     <p class="appointment-details">{appointment.date} at {appointment.time}</p>
                     <p class="service">
                       Service: {appointment.service}
-                      {appointment.subServices && appointment.subServices.length > 0 ? ` | Sub-services: ${appointment.subServices.join(', ')}` : ''}
                     </p>
+                    {#if appointment.subServices && appointment.subServices.length > 0}
+                      <p class="sub-services">
+                        Sub-services: {appointment.subServices.join(', ')}
+                      </p>
+                    {/if}
+                    
                     
                   </div>
                   {/if}
