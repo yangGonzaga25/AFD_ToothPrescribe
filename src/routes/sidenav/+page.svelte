@@ -17,6 +17,7 @@
         // @ts-ignore
         sessionStorage.setItem('isCollapsed', isCollapsed); // Save the state
     };
+    export let hidePatientList = true; 
 </script>
 
 
@@ -223,7 +224,7 @@
                     <span class="text">Appointment</span>
                 </a>
             </li>
-            <li>
+            <li style="display: {hidePatientList ? 'none' : 'flex'}">
                 <a href="./patient-list">
                     <img class="icon" src="/images/icon-patient.png" alt="Patient Icon" />
                     <span class="text">Patient List</span>
