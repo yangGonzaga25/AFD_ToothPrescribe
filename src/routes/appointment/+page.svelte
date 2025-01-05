@@ -10,6 +10,8 @@
   import { writable } from 'svelte/store';
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
+  import Swal from 'sweetalert2';
+
 
   // Define types
   type Appointment = {
@@ -172,6 +174,22 @@ const fetchPatientProfiles = async () => {
 fetchPatientProfiles();
 const updatePendingAppointmentStatus = async (appointmentId: string, newStatus: string) => {
   try {
+
+     // Confirm action with SweetAlert
+     const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: `Do you want to update the status to ${newStatus}?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Yes, update it!',
+    });
+
+    if (!result.isConfirmed) {
+      return; // If the user cancels, stop the function here
+    }
+
     // Get a reference to the appointment document in Firestore
     const appointmentRef = doc(db, 'appointments', appointmentId);
 
@@ -190,8 +208,22 @@ const updatePendingAppointmentStatus = async (appointmentId: string, newStatus: 
 
     // Re-fetch the data to ensure the status update is reflected
     await fetchAppointments();
+
+     // Success alert
+     await Swal.fire({
+      title: 'Success!',
+      text: `The status has been updated to ${newStatus}.`,
+      icon: 'success',
+    });
   } catch (error) {
     console.error('Error updating appointment status:', error);
+
+    // Error alert
+    await Swal.fire({
+      title: 'Error!',
+      text: 'There was an error updating the status. Please try again.',
+      icon: 'error',
+    });
   }
 };
 
@@ -374,10 +406,16 @@ const submitPrescription = async () => {
       );
 
       if (!existingPrescriptionQuery.empty) {
+        await Swal.fire({
+          title: 'Duplicate Prescription',
+          text: 'A prescription already exists for this appointment.',
+          icon: 'warning',
+          confirmButtonText: 'OK',
+        });
         console.error("A prescription already exists for this appointment.");
         return; // Stop execution if a prescription already exists
       }
-
+    
       // Create the new prescription document
       const prescription = {
         appointmentId: selectedAppointment.id,
@@ -394,14 +432,41 @@ const submitPrescription = async () => {
       prescriptionMedicines = [];
       prescriber = '';
       isModalOpen = false;
+
+      
+       // Show success alert
+       await Swal.fire({
+        title: 'Success!',
+        text: 'Prescription successfully saved to Firestore.',
+        icon: 'success',
+      });
     } else {
+      await Swal.fire({
+        title: 'No Appointment Selected',
+        text: 'Please select an appointment to submit a prescription.',
+        icon: 'error',
+        confirmButtonText: 'OK',
+      });
       console.error("No selected appointment found.");
     }
   } catch (error) {
     if (error instanceof Error) {
       console.error("Error saving prescription to Firestore:", error.message);
+      // Show error alert
+      await Swal.fire({
+        title: 'Error!',
+        text: `Error saving prescription: ${error.message}`,
+        icon: 'error',
+      });
     } else {
       console.error("Error saving prescription to Firestore:", error); // Fallback for unknown error types
+      
+      // Show fallback error alert
+      await Swal.fire({
+        title: 'Error!',
+        text: 'An unknown error occurred while saving the prescription.',
+        icon: 'error',
+      });
     }
   }
 };
@@ -461,8 +526,29 @@ const goToNextSection = () => {
 
     // Check if the status is 'Completed' and ensure remarks is provided
     if (newStatus === 'Completed' && !remarksToSave.trim()) {
+      await Swal.fire({
+        title: 'Remarks Required',
+        text: 'Please provide remarks to mark the appointment as completed.',
+        icon: 'warning',
+        confirmButtonText: 'OK',
+      });
       console.error('Remarks are required to mark the appointment as completed.');
       return; // Prevent update if remarks are not provided
+    }
+
+      // Confirm the action with SweetAlert
+      const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: `Do you want to mark this appointment as ${newStatus}?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Yes, update it!',
+    });
+
+    if (!result.isConfirmed) {
+      return; // If the user cancels, stop the function here
     }
 
     // Get a reference to the appointment document in Firestore
@@ -486,8 +572,25 @@ const goToNextSection = () => {
     // If re-fetching is still needed
     await fetchAppointments();
 
+     // Show success alert
+     await Swal.fire({
+      title: 'Success!',
+      text: `The appointment has been marked as ${newStatus}.`,
+      icon: 'success',
+    }).then(async (result) => {
+    if (result.isConfirmed) {
+      // Fetch appointments after the user clicks "OK"
+      await fetchAppointments();
+    }
+  });
   } catch (error) {
     console.error('Error updating appointment status:', error);
+     // Show error alert
+     await Swal.fire({
+      title: 'Error!',
+      text: 'There was an error updating the appointment. Please try again.',
+      icon: 'error',
+    });
   }
 };
 
