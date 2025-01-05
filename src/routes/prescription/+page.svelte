@@ -211,43 +211,72 @@ async function unarchivePatient(id: string) {
     }
 }
 
-    // Fetch prescribed patients and map to patient profiles
-    async function fetchPrescribedPatients() {
-        const prescriptionsSnapshot = await getDocs(collection(db, "prescriptions"));
-        const prescriptions = prescriptionsSnapshot.docs.map(doc => ({
+async function fetchPrescribedPatients() {
+    // Fetch prescriptions from the 'prescriptions' collection
+    const prescriptionsSnapshot = await getDocs(collection(db, "prescriptions"));
+    const prescriptions = prescriptionsSnapshot.docs.map(doc => {
+        const data = doc.data();
+        
+        // Extract instructions from medicines array
+        const instructions = data.medicines && data.medicines.length > 0 
+            ? data.medicines.map(m => m.instructions).join(", ") 
+            : '';  // If no medicines, return an empty string
+        
+        return {
             id: doc.id,
-            patientId: doc.data().patientId,
-            instructions: doc.data().instructions || '',
-            medications: doc.data().medication || '',
-            dateVisited: doc.data().dateVisited || '',
-            prescriber: doc.data().prescriber || '',
-            qtyRefills: doc.data().qtyRefills || ''
-        }));
+            appointmentId: data.appointmentId,  // Store the appointmentId from prescriptions
+            instructions: instructions,         // Map instructions correctly
+            medications: data.medicines ? data.medicines.map((m: { medicine: any; }) => m.medicine).join(", ") : '',
+            dateVisited: data.createdAt || '',
+            prescriber: data.prescriber || '',
+            qtyRefills: data.medicines ? data.medicines.length : 0  // Ensure we handle medicines length
+        };
+    });
 
-        // Fetch patient details from another collection (assuming you have a patients collection)
-        const patientsSnapshot = await getDocs(collection(db, "patientProfiles"));
-        const patients = patientsSnapshot.docs.map(doc => ({
+    // Fetch appointments to get patientId
+    const appointmentsSnapshot = await getDocs(collection(db, "appointments"));
+    const appointments = appointmentsSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
             id: doc.id,
-            name: doc.data().name,           // Assuming 'name' is the first name
-            lastName: doc.data().lastName,   // Assuming 'lastName' is the last name
-            address: doc.data().address,
-            phone: doc.data().phone,
-            age: doc.data().age
-        }));
+            patientId: data.patientId  // Extract patientId from appointments
+        };
+    });
 
-        // Map prescriptions to patients and group prescriptions by patient
-        prescribedPatients = patients.map(patient => {
-            const patientPrescriptions = prescriptions.filter(prescription => prescription.patientId === patient.id);
-            return {
-                id: patient.id,
-                fullName: `${patient.name} ${patient.lastName}`,  // Concatenating first and last name
-                address: patient.address,
-                phone: patient.phone,
-                age: patient.age,
-                prescriptions: patientPrescriptions
-            };
-        });
-    }
+    // Map prescriptions to the corresponding patient
+    prescribedPatients = prescriptions.map(prescription => {
+        // Find the appointment that matches the prescription's appointmentId
+        const appointment = appointments.find(app => app.id === prescription.appointmentId);
+
+        // If appointment is found, fetch the patientId
+        const patientId = appointment ? appointment.patientId : null;
+
+        return {
+            ...prescription,
+            patientId: patientId
+        };
+    });
+
+    // Fetch patient profiles to link with prescriptions
+    const patientsSnapshot = await getDocs(collection(db, "patientProfiles"));
+    const patients = patientsSnapshot.docs.map(doc => doc.data());
+
+    // Map prescriptions to patients and group prescriptions by patient
+    prescribedPatients = patients.map(patient => {
+        // Match prescriptions with patients using patientId
+        const patientPrescriptions = prescribedPatients.filter(prescription => prescription.patientId === patient.id);
+        return {
+            id: patient.id,
+            fullName: `${patient.name} ${patient.lastName}`,
+            address: patient.address,
+            phone: patient.phone,
+            age: patient.age,
+            prescriptions: patientPrescriptions
+        };
+    });
+
+    console.log("Prescribed Patients:", prescribedPatients);  // Check the final result
+}
 
 
     onMount(fetchPatients);
