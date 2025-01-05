@@ -334,26 +334,8 @@ async function deleteMedicine(medicine: Medicine) {
 
 
 <style>
-    :global(button.add-button) {
-  background-color: #4CAF50; /* Green background */
-  color: white;
-  padding: 10px 20px;
-  border: none;
-  cursor: pointer;
-  font-size: 16px;
-  border-radius: 0.375rem; /* Rounded corners */
-  transition: background-color 0.3s, transform 0.2s; /* Smooth transitions */
-}
+ 
 
-:global(button.add-button):hover {
-  background-color: #45a049; /* Darker green on hover */
-  transform: translateY(-2px); /* Slight lift effect */
-}
-
-:global(button.add-button):active {
-  background-color: #388e3c; /* Even darker green when clicked */
-  transform: translateY(0); /* Reset lift effect */
-}
       .dashboard {
         display: flex;
         height: 100vh;
@@ -424,23 +406,21 @@ async function deleteMedicine(medicine: Medicine) {
 }
 
 .bg-white:hover {
-    transform: translateY(-5px);
+    
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
 }
 
 .controls button {
-    background-color: #e3e3e3;
+  
     border: none;
     cursor: pointer;
     padding: 8px;
     margin: 0 5px;
-    border-radius: 50%;
-    transition: background-color 0.3s ease;
+    
+    
 }
 
-.controls button:hover {
-    background-color: #d0d0d0;
-}
+
 
 span {
     font-size: 1.1rem;
@@ -603,6 +583,7 @@ textarea:focus {
 .edit-popup .confirm-button:hover {
   background-color: #388e3c;
 }
+ 
 
 </style>
 
@@ -627,9 +608,15 @@ textarea:focus {
                     <h2 class="text-lg font-semibold">{medicine.name}</h2>
                     <p class="text-gray-600 mb-4">{medicine.description}</p>
                     <div class="controls">
-                        <span>{medicine.quantity}</span>
-                        <button class="edit-button" on:click={() => openEditPopup(medicine)}>Edit</button>
-                        <button class="delete-button" on:click={() => deleteMedicine(medicine)}>Delete</button>
+                        <span>Quantity:{medicine.quantity}</span>
+                        <button class="edit-button" on:click={() => openEditPopup(medicine)}>
+                          <i class="fas fa-edit" style="color: blue;"></i> Edit
+                      </button>
+                      <button class="delete-button" on:click={() => deleteMedicine(medicine)}>
+                          <i class="fas fa-trash" style="color: red;"></i> Delete
+                      </button>
+                      
+                      
                     </div>
                 </div>
             {/each}

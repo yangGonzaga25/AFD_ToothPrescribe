@@ -269,7 +269,6 @@ onMount(async () => {
   await fetchAvailableMedicines();
 });
 
-// Add selected medicine from the database to the prescription
 const addSelectedMedicine = async () => {
   if (selectedMedicine && qtyRefills) {
     const db = getFirestore();
@@ -279,6 +278,29 @@ const addSelectedMedicine = async () => {
 
     if (quantity >= qtyRefillsNumber) { // Use the converted number for comparison
       try {
+        // Check if a prescription already exists for this appointment
+        const existingPrescriptionQuery = await getDocs(
+          query(
+            collection(db, "prescriptions"),
+            where("appointmentId", "==", selectedAppointment?.id)
+          )
+        );
+
+        if (!existingPrescriptionQuery.empty) {
+          console.error("A prescription already exists for this appointment.");
+          return; // Prevent adding if a prescription already exists
+        }
+
+        // Check if the medicine is already in the prescription
+        const isMedicineInPrescription = prescriptionMedicines.some(
+          (item) => item.medicine === name
+        );
+
+        if (isMedicineInPrescription) {
+          console.error("This medicine has already been added to the prescription.");
+          return; // Prevent adding if the medicine already exists in the prescription
+        }
+
         // Decrease the stock in Firestore
         const updatedQuantity = quantity - qtyRefillsNumber;
         await updateDoc(doc(db, "medicines", id), { quantity: updatedQuantity });
@@ -307,9 +329,18 @@ const addSelectedMedicine = async () => {
   }
 };
 
-// Add manually entered medicine to the prescription
 const addManualMedicine = () => {
   if (medication && qtyRefills) {
+    // Check if the manually entered medicine already exists in the prescription
+    const isMedicineInPrescription = prescriptionMedicines.some(
+      (item) => item.medicine === medication
+    );
+
+    if (isMedicineInPrescription) {
+      console.error("This medicine has already been added to the prescription.");
+      return; // Prevent adding if the medicine already exists
+    }
+
     // Add manually to the prescription
     prescriptionMedicines.push({
       medicine: medication,
@@ -333,6 +364,21 @@ const submitPrescription = async () => {
   try {
     if (selectedAppointment) {
       const db = getFirestore();
+      
+      // Check if a prescription already exists for this appointment
+      const existingPrescriptionQuery = await getDocs(
+        query(
+          collection(db, "prescriptions"),
+          where("appointmentId", "==", selectedAppointment.id)
+        )
+      );
+
+      if (!existingPrescriptionQuery.empty) {
+        console.error("A prescription already exists for this appointment.");
+        return; // Stop execution if a prescription already exists
+      }
+
+      // Create the new prescription document
       const prescription = {
         appointmentId: selectedAppointment.id,
         medicines: prescriptionMedicines,
@@ -353,12 +399,13 @@ const submitPrescription = async () => {
     }
   } catch (error) {
     if (error instanceof Error) {
-        console.error("Error saving prescription to Firestore:", error.message);
+      console.error("Error saving prescription to Firestore:", error.message);
     } else {
-        console.error("Error saving prescription to Firestore:", error); // Fallback for unknown error types
+      console.error("Error saving prescription to Firestore:", error); // Fallback for unknown error types
     }
-}
+  }
 };
+
 
 const closeModal = () => {
     isModalOpen = false; // Close the modal
@@ -407,10 +454,16 @@ const goToNextSection = () => {
   export const appointmentStore = writable<Appointment[]>([]);
 
 
-  export const handleCompletedAppointment = async (appointmentId: string, newStatus: string, remarks: string) => {
+ export const handleCompletedAppointment = async (appointmentId: string, newStatus: string, remarks: string) => {
   try {
     // Ensure remarks is never undefined, default to an empty string if necessary
     const remarksToSave = remarks || '';
+
+    // Check if the status is 'Completed' and ensure remarks is provided
+    if (newStatus === 'Completed' && !remarksToSave.trim()) {
+      console.error('Remarks are required to mark the appointment as completed.');
+      return; // Prevent update if remarks are not provided
+    }
 
     // Get a reference to the appointment document in Firestore
     const appointmentRef = doc(db, 'appointments', appointmentId);
@@ -444,164 +497,165 @@ const goToNextSection = () => {
 </script>
 
 <style>
- /* Position both containers on the right side and adjust width */
-.container1 {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  z-index: 1000;
-  width: 320px; /* Adjusted width */
-  background-color: transparent;
-  max-height: 94vh; /* Increased max-height to 90% of the viewport height */
-  overflow-y: auto; /* Allows scrolling if the content overflows */
-  margin-bottom: 20px; /* Added margin to avoid overlapping with bottom content */
-}
+  /* Position both containers on the right side and adjust width */
+  .container1 {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    width: 320px; /* Adjusted width */
+    background-color: transparent;
+    max-height: 94vh; /* Increased max-height to 90% of the viewport height */
+    overflow-y: auto; /* Allows scrolling if the content overflows */
+    margin-bottom: 20px; /* Added margin to avoid overlapping with bottom content */
+  }
 
-.card-content1 {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  text-align: left;
-  margin-right: 0;
-  padding: 10px;
-}
+  .card-content1 {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    text-align: left;
+    margin-right: 0;
+    padding: 10px;
+  }
 
-.appointment-container1 {
-  background-color: transparent;
-  padding: 12px;
-  border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  max-height: 90vh; /* Increased max-height to 90% of the viewport height */
-  overflow-y: auto; /* Ensures the container becomes scrollable if the content overflows */
-  margin-bottom: 20px; /* Adds some space between the container and next content */
-}
+  .appointment-container1 {
+    background-color: transparent;
+    padding: 12px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    max-height: 90vh; /* Increased max-height to 90% of the viewport height */
+    overflow-y: auto; /* Ensures the container becomes scrollable if the content overflows */
+    margin-bottom: 20px; /* Adds some space between the container and next content */
+  }
 
-.appointment-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-}
+  .appointment-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
 
-.appointment-title {
-  font-size: 1rem;
-  font-weight: bold;
-}
+  .appointment-title {
+    font-size: 1rem;
+    font-weight: bold;
+  }
 
-.view-all {
-  font-size: 0.75rem;
-  color: #3182ce;
-  cursor: pointer;
-  text-decoration: underline;
-}
+  .view-all {
+    font-size: 0.75rem;
+    color: #3182ce;
+    cursor: pointer;
+    text-decoration: underline;
+  }
 
-.appointment-card {
-  margin-bottom: 10px;
-  padding: 10px;
-  font-size: 0.875rem;
-  border-radius: 8px;
-  background-color: transparent;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
+  .appointment-card {
+    margin-bottom: 10px;
+    padding: 10px;
+    font-size: 0.875rem;
+    border-radius: 8px;
+    background-color: transparent;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
 
-.patient-info {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
+  .patient-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
 
-.patient-name {
-  font-size: 1rem;
-  font-weight: bold;
-}
+  .patient-name {
+    font-size: 1rem;
+    font-weight: bold;
+  }
 
-.patient-age-service {
-  font-size: 0.75rem;
-  color: gray;
-}
+  .patient-age-service {
+    font-size: 0.75rem;
+    color: gray;
+  }
 
-.service {
-  margin-top: 4px;
-}
+  .service {
+    margin-top: 4px;
+  }
 
-.appointment-buttons {
-  margin-top: 8px;
-  display: flex;
-  justify-content: space-between;
-}
+  .appointment-buttons {
+    margin-top: 8px;
+    display: flex;
+    justify-content: space-between;
+  }
 
-.container {
-  position: fixed;
-  bottom: 20px;
-  left: 230px; 
-  max-height: 90%; /* Adjusted height for better visibility */
-  min-height: 600px; /* Increased minimum height */
-  overflow-y: auto; /* Ensures scrolling if content exceeds container size */
-  width: 650px;
-}
+  .container {
+    position: fixed;
+    bottom: 20px;
+    left: 230px;
+    max-height: 90%; /* Adjusted height for better visibility */
+    min-height: 600px; /* Increased minimum height */
+    overflow-y: auto; /* Ensures scrolling if content exceeds container size */
+    width: 650px;
+  }
 
-.appointments-section {
-  padding: 20px;
-  background-color: #f9fafb;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  margin-bottom: 20px;
-}
+  .appointments-section {
+    padding: 20px;
+    background-color: #f9fafb;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+  }
 
-.appointment-card {
-  background-color: #fff;
-  padding: 15px;
-  margin-bottom: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-  min-height: 100px; 
-}
+  .appointment-card {
+    background-color: #fff;
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    min-height: 100px;
+  }
 
-.appointment-details {
-  margin-bottom: 10px;
-}
+  .appointment-details {
+    margin-bottom: 10px;
+  }
 
-.appointment-buttons {
-  display: flex;
-  gap: 10px;
-  justify-content: flex-end;
-}
+  .appointment-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+  }
 
-.appointment-buttons button {
-  padding: 8px 16px;
-  border-radius: 5px;
-  cursor: pointer;
-  border: none;
-  font-size: 0.9rem;
-  font-weight: 600;
-}
+  .appointment-buttons button {
+    padding: 8px 16px;
+    border-radius: 5px;
+    cursor: pointer;
+    border: none;
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
 
-.bg-blue-100 {
-  background-color: #e0f7fa;
-  color: #0288d1;
-}
+  .bg-blue-100 {
+    background-color: #e0f7fa;
+    color: #0288d1;
+  }
 
-.bg-red-100 {
-  background-color: #ffebee;
-  color: #d32f2f;
-}
+  .bg-red-100 {
+    background-color: #ffebee;
+    color: #d32f2f;
+  }
 
-.no-appointments {
-  text-align: center;
-  padding: 15px;
-  font-size: 1.2rem;
-  color: #555;
-  background-color: #f4f4f4;
-  border-radius: 8px;
-  max-height: 90%;
-  min-height: 300px;
-  bottom: 20px;
-}
-/* Modal Overlay Styling */
-.modal-overlay {
+  .no-appointments {
+    text-align: center;
+    padding: 15px;
+    font-size: 1.2rem;
+    color: #555;
+    background-color: #f4f4f4;
+    border-radius: 8px;
+    max-height: 90%;
+    min-height: 300px;
+    bottom: 20px;
+  }
+
+  /* Modal Overlay Styling */
+  .modal-overlay {
     position: fixed;
     top: 0;
     left: 0;
@@ -632,7 +686,77 @@ const goToNextSection = () => {
   .modal-overlay {
     transition: visibility 0.3s ease-in-out;
   }
+
+  /* Media Queries for Responsiveness */
+  @media (max-width: 1024px) {
+    .container1 {
+      width: 270px; /* Adjust width for medium-sized screens */
+      top: 10px;
+      right: 10px;
+    }
+
+    .container {
+      left: 15px;
+      width: 100%;
+      min-height: 500px;
+    }
+
+    .appointment-buttons {
+      flex-direction: column; /* Stack the buttons vertically */
+      gap: 10px;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .container1 {
+      width: 100%; /* Take full width for small screens */
+      top: 10px;
+      right: 0;
+      bottom: 0;
+    }
+
+    .container {
+      left: 0;
+      width: 100%;
+      min-height: 450px;
+    }
+
+    .appointment-card {
+      padding: 10px;
+      font-size: 0.8rem;
+    }
+
+    .appointment-buttons button {
+      padding: 6px 12px;
+      font-size: 0.85rem;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .container1 {
+      width: 100%;
+      bottom: 0;
+      right: 0;
+      z-index: 100;
+    }
+
+    .container {
+      left: 0;
+      width: 100%;
+      min-height: 400px;
+    }
+
+    .appointment-buttons {
+      flex-direction: column; /* Stack buttons for smaller screens */
+    }
+
+    .appointment-card {
+      padding: 8px;
+      font-size: 0.75rem;
+    }
+  }
 </style>
+
 
 <Sidebar {isCollapsed} {toggleSidebar} {logout} />
 <div class="container1">
@@ -800,8 +924,6 @@ const goToNextSection = () => {
         {/each}
         <p>Service: {appointment.service}</p>
 
-        <!-- Input for remarks directly below the service -->
-       <!-- Input for remarks directly below the service -->
        <div>
         <label for="remarks-{appointment.id}">Remarks:</label>
         <input
@@ -815,7 +937,7 @@ const goToNextSection = () => {
      
     <div class="appointment-buttons">
       <button on:click={() => openModal(appointment.id)} class="bg-green-100">
-        Prescription
+        Add Prescription
       </button>
       <button
         class="bg-blue-100"
@@ -847,7 +969,7 @@ const goToNextSection = () => {
  <!-- svelte-ignore a11y_no_static_element_interactions -->
  <div class="modal-overlay" on:click={closeModal} role="dialog" aria-labelledby="modal-title" aria-hidden={!isModalOpen}>
    <div class="modal-content" on:click|stopPropagation tabindex="-1">
-     <button class="absolute top-2 right-2 text-white text-xl" on:click={closeModal} aria-label="Close Modal">X</button>
+     <button class="absolute top-2 right-2 text-white text-xl" on:click={closeModal} aria-label="Close Modal"></button>
      <h2 id="modal-title" class="text-lg font-bold mb-4">
        Add Prescription for 
        {selectedAppointment 
