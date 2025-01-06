@@ -4,14 +4,12 @@
     import { initializeApp, getApps, getApp } from "firebase/app";
     import Chart from 'chart.js/auto';
     import { onMount } from 'svelte';  // <-- Make sure you have this line to import onMount
-
+    import { goto } from '$app/navigation';
     // Firebase initialization
     import { firebaseConfig } from "$lib/firebaseConfig";
     const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    const today = getTodayDate();
-const todayTimestamp = Timestamp.fromDate(new Date(today));
-
+   
     let isCollapsed = false;
 
     // Define a type for the stats
@@ -43,14 +41,29 @@ const todayTimestamp = Timestamp.fromDate(new Date(today));
     // State to handle the current view for appointments
     let isViewingAppointments = false;
 
-    let appointmentData = [];
     let dateLabels: string[] = [];
 let totalPatientsPerDay: number[] = []; // Line graph data (number of patients)
 let newAppointmentsPerDay: number[] = []; // Bar graph data (number of appointments)
 let averageNewAppointments: number = 0;
 let averageTotalPatients: number = 0;
+let patients: any[] = [];
+let prescriptions: any[] = [];
+let monthlyAppointments: any[] = [];
+let openTable: 'patients' | 'appointments' | 'prescriptions' | 'monthlyAppointments' | null = null;
 
+interface PrescriptionData {
+    id?: string; // Optional if you don't want to require it
+    medication: string;
+    dosage: string;
+    date: string;
+    patientId: string; // Assuming you have a patientId field
+}
 
+interface PatientData {
+    name: string;
+    lastName: string;
+    // Add other fields as necessary
+}
     interface Patient {
         name: string;       // First name
         lastName: string;   // Last name
@@ -66,13 +79,6 @@ let averageTotalPatients: number = 0;
         window.location.href = "/"; // Redirect to landing page
     }
 
-    function calculateAverages() {
-    const totalDays = dateLabels.length;
-    if (totalDays > 0) {
-        averageNewAppointments = newAppointmentsPerDay.reduce((a, b) => a + b, 0) / totalDays;
-        averageTotalPatients = totalPatientsPerDay.reduce((a, b) => a + b, 0) / totalDays;
-    }
-}
     // Helper function to get today's date in 'YYYY-MM-DD' format
     function getTodayDate() {
         const today = new Date();
@@ -81,8 +87,23 @@ let averageTotalPatients: number = 0;
         const day = String(today.getDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
     }
-
-    async function fetchGraphData() {
+ // Function to open a specific table and close others
+ function openTableHandler(table: 'patients' | 'appointments' | 'prescriptions' | 'monthlyAppointments') {
+        if (openTable === table) {
+            openTable = null; // Close the table if it's already open
+        } else {
+            openTable = table; // Open the selected table
+        }
+    }
+    async function fetchPatients() {
+    const patientsCollection = collection(db, "patientProfiles");
+    const patientDocs = await getDocs(patientsCollection);
+    patients = patientDocs.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    openTableHandler('patients'); // Open patients table
+}
+    
+    
+async function fetchGraphData() {
     try {
         const appointmentsCollection = collection(db, "appointments");
         const patientCollection = collection(db, "patientProfiles");
@@ -132,7 +153,6 @@ let averageTotalPatients: number = 0;
     } catch (error) {
         console.error("Error fetching data:", error);
     }
-    calculateAverages();
 }
 
 
@@ -271,31 +291,95 @@ function createCharts() {
         
     }
 }
+async function fetchMonthlyAppointments() {
+    try {
+        const currentMonth = new Date().getMonth() + 1; // Months are 0-indexed
+        const currentYear = new Date().getFullYear();
 
+        const appointmentsCollection = collection(db, "appointments");
+        const appointmentDocs = await getDocs(appointmentsCollection);
+
+        // Filter appointments for the current month and year
+        const filteredAppointments = appointmentDocs.docs.filter(appointmentDoc => {
+            const data = appointmentDoc.data();
+            const appointmentDate = new Date(data.date); // Assuming date is in a valid format
+            return appointmentDate.getMonth() + 1 === currentMonth && appointmentDate.getFullYear() === currentYear;
+        });
+
+        // Fetch patient names for the filtered appointments
+        monthlyAppointments = await Promise.all(filteredAppointments.map(async (appointmentDoc) => {
+            const appointmentData = appointmentDoc.data();
+            const patientId = appointmentData.patientId;
+
+            const patientDocRef = doc(db, "patientProfiles", patientId);
+            const patientDocSnap = await getDoc(patientDocRef);
+            const patientData = patientDocSnap.data() as PatientData; // Cast to PatientData
+
+            const patientName = patientData ? `${patientData.name} ${patientData.lastName}` : "Unknown Patient";
+
+            return { id: appointmentDoc.id, ...appointmentData, patientName }; // Include patient name
+        }));
+
+       
+    } catch (error) {
+        console.error("Error fetching monthly appointments:", error);
+    }
+    openTableHandler('monthlyAppointments'); // Open monthly appointments table
+
+}
+
+async function fetchAppointmentsData() {
+    const appointmentsCollection = collection(db, "appointments");
+    const appointmentDocs = await getDocs(appointmentsCollection);
+    appointments = appointmentDocs.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    openTableHandler('appointments'); // Open appointments table
+}
+
+async function fetchPrescriptionsData() {
+    const prescriptionsCollection = collection(db, "prescriptions");
+    const prescriptionDocs = await getDocs(prescriptionsCollection);
+
+    prescriptions = await Promise.all(prescriptionDocs.docs.map(async (prescriptionDoc) => {
+        const prescriptionData = prescriptionDoc.data() as PrescriptionData; // Cast to PrescriptionData
+        const patientId = prescriptionData.patientId; // Assuming you have a patientId field
+
+        const patientDocRef = doc(db, "patientProfiles", patientId);
+        const patientDocSnap = await getDoc(patientDocRef);
+        const patientData = patientDocSnap.data() as PatientData; // Cast to PatientData
+        const patientName = patientData ? `${patientData.name} ${patientData.lastName}` : "Unknown Patient";
+
+        return { id: prescriptionDoc.id, ...prescriptionData, patientName }; // Include patient name
+    }));
+
+    console.log("Fetched prescriptions:", prescriptions); // Log fetched prescriptions
+    openTableHandler('prescriptions'); // Open prescriptions table
+}
     // Fetch appointments and patient names
     async function fetchAppointments() {
-        try {
-            const appointmentsCollection = collection(db, "appointments");
-            const appointmentDocs = await getDocs(appointmentsCollection);
+    console.log("Fetching appointments..."); // Add this line
 
-            // Store all appointment data with the patient name
-            appointments = await Promise.all(appointmentDocs.docs.map(async (docSnapshot) => {
-                const appointmentData = docSnapshot.data();
-                const patientId = appointmentData.patientId;
+    try {
+        const appointmentsCollection = collection(db, "appointments");
+        const appointmentDocs = await getDocs(appointmentsCollection);
 
-                const patientDocRef = doc(db, "patientProfiles", patientId);
-                const patientDocSnap = await getDoc(patientDocRef);
-                const patientData = patientDocSnap.data();
-                const patientName = patientData ? `${patientData.name} ${patientData.lastName}` : "Unknown Patient";
+        // Store all appointment data with the patient name
+        appointments = await Promise.all(appointmentDocs.docs.map(async (docSnapshot) => {
+            const appointmentData = docSnapshot.data();
+            const patientId = appointmentData.patientId;
 
-                return { id: docSnapshot.id, ...appointmentData, patientName };
-            }));
-            isViewingAppointments = true;
-        } catch (error) {
-            console.error("Error fetching appointments:", error);
-        }
+            const patientDocRef = doc(db, "patientProfiles", patientId);
+            const patientDocSnap = await getDoc(patientDocRef);
+            const patientData = patientDocSnap.data();
+            const patientName = patientData ? `${patientData.name} ${patientData.lastName}` : "Unknown Patient";
+
+            return { id: docSnapshot.id, ...appointmentData, patientName };
+        }));
+
+        openTableHandler('appointments'); // Open appointments table after fetching
+    } catch (error) {
+        console.error("Error fetching appointments:", error);
     }
-    
+}
 
     // Fetch data on component mount
     fetchDashboardData();
@@ -392,8 +476,37 @@ function createCharts() {
         padding: 20px; /* Adds padding inside the container */
     }
 
+    table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
 
+th, td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
 
+th {
+    background-color: #00a2e8; /* Green background for header */
+    color: white; /* White text for header */
+}
+
+tbody tr:nth-child(even) {
+    background-color: #f2f2f2; /* Light gray for even rows */
+}
+
+tbody tr:hover {
+    background-color: #ddd; /* Light gray on hover */
+}
+
+.card:focus {
+    box-shadow: 0 0 0 4px rgba(0, 123, 255, 0.5); /* Soft blue glow */
+    border: 2px solid #007BFF; /* Optional: Add a border for additional emphasis */
+    transition: box-shadow 0.3s ease, border 0.3s ease; /* Smooth transition */
+    outline: none; /* Remove default outline */
+}
 </style>
 
 <div class="dashboard">
@@ -406,37 +519,117 @@ function createCharts() {
             <h2>Data Summary</h2>
         </div>
         <div class="cards">
-            <button class="card" on:click="{toggleAppointments}" type="button">
+           
+            <button class="card" on:click="{fetchMonthlyAppointments}" type="button">
+                <span class="icon fas fa-calendar-day"></span>
+                <div class="text">
+                    <h3>{stats.monthlyAppointments}</h3>
+                    <p>This Month's Appointments</p>
+                </div>
+            </button>
+            <button class="card" on:click="{fetchAppointments}" type="button">
                 <span class="icon fas fa-calendar-alt"></span>
                 <div class="text">
                     <h3>{stats.newAppointments}</h3>
                     <p>Total Appointments</p>
                 </div>
             </button>
-            <div class="card">
-                <span class="icon fas fa-calendar-day"></span> <!-- New card for today's appointments -->
-                <div class="text">
-                    <h3>{stats.monthlyAppointments}</h3>
-                    <p>This Month's Appointments</p>
-                </div>
-            </div>
-            <div class="card">
+            <button class="card" on:click="{fetchPatients}" type="button" aria-label="View total patients">
                 <span class="icon fas fa-users"></span>
                 <div class="text">
                     <h3>{stats.totalPatients}</h3>
                     <p>Total Patients</p>
                 </div>
-            </div>
-            <div class="card">
+            </button>
+            
+            <button class="card" on:click="{() => goto('/prescription')}" type="button" aria-label="View total prescriptions">
                 <span class="icon fas fa-file-prescription"></span>
                 <div class="text">
                     <h3>{stats.totalPrescriptions}</h3>
                     <p>Total Prescriptions</p>
                 </div>
-            </div>
-           
-          
-
+            </button>
+            {#if openTable === 'patients'}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Patient Name</th> <!-- Change the header to "Full Name" -->
+                    </tr>
+                </thead>
+                <tbody>
+                    {#each patients as patient}
+                        <tr>
+                            <td>{patient.name} {patient.lastName}</td> <!-- Concatenate name and lastName -->
+                        </tr>
+                    {/each}
+                </tbody>
+            </table>
+        {/if}
+        
+        {#if openTable === 'monthlyAppointments'}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Patient Name</th>
+                        <th>Date</th>
+                        <th>Time</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {#each monthlyAppointments as appointment}
+                        <tr>
+                            <td>{appointment.patientName}</td>
+                            <td>{appointment.date}</td>
+                            <td>{appointment.time}</td>
+                        </tr>
+                    {/each}
+                </tbody>
+            </table>
+        {/if}
+        
+        {#if openTable === 'appointments'}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Patient Name</th>
+                        <th>Date</th>
+                        <th>Time</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {#each appointments as appointment}
+                        <tr>
+                            <td>{appointment.patientName}</td>
+                            <td>{appointment.date}</td>
+                            <td>{appointment.time}</td>
+                        </tr>
+                    {/each}
+                </tbody>
+            </table>
+        {/if}
+        
+        {#if openTable === 'prescriptions'}
+    <table>
+        <thead>
+            <tr>
+                <th>Patient Name</th>
+                <th>Medication</th>
+                <th>Dosage</th>
+                <th>Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            {#each prescriptions as prescription}
+                <tr>
+                    <td>{prescription.patientName}</td>
+                    <td>{prescription.medication}</td>
+                    <td>{prescription.dosage}</td>
+                    <td>{prescription.date}</td>
+                </tr>
+            {/each}
+        </tbody>
+    </table>
+{/if}  
             <div class="chart">
                 <div>
                     <h2>New Appointments</h2>
