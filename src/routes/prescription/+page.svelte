@@ -362,7 +362,6 @@ onMount(async () => {
                 <option value="desc">Sort by Name: Z–A</option>
             </select>
         </div>
-        
         <div class="category-switch">
             <button 
                 class="category-button {currentCategory === 'Active' ? 'active' : ''}" 
@@ -375,6 +374,7 @@ onMount(async () => {
                 Archived Patients
             </button>
         </div>
+        
         
         <Table>
             <TableHead>
@@ -747,24 +747,30 @@ onMount(async () => {
         outline: none;
     }
     .category-switch {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 20px;
-        }
-    
-        .category-button {
-            padding: 10px 20px;
-            background-color: #08B8F3;
-            color: white;
-            border: none;
-            border-radius: 50px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-    
-        .category-button.active {
-            background-color: #4CAF50;
-        }
+    margin-top: 10px;
+    display: flex;
+    justify-content: flex-start;  /* Para magkalapit sila */
+    gap: 10px;  /* Magdagdag ng space sa pagitan ng mga button */
+    margin-bottom: 20px;
+}
+
+.category-button {
+    padding: 10px 20px;
+    background-color: #08B8F3;
+    color: white;
+    border: none;
+    border-top-left-radius: 20px;  /* Round top-left corner */
+    border-top-right-radius: 20px; /* Round top-right corner */
+    border-bottom-left-radius: 0;  /* Flat bottom-left corner */
+    border-bottom-right-radius: 0; /* Flat bottom-right corner */
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.category-button.active {
+    background-color: #4CAF50;
+}
+
         /* Modal Table Container */
     .modal-table-container {
         overflow-x: auto; /* Adds horizontal scrolling if content overflows */
