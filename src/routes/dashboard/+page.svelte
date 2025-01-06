@@ -1,6 +1,6 @@
 <script lang="ts">
     import Sidebar from '../sidenav/+page.svelte'; // Import the sidebar component
-    import { getFirestore, collection, getDocs, query, where, updateDoc, doc, getDoc } from "firebase/firestore";
+    import { Timestamp, getFirestore, collection, getDocs, query, where, updateDoc, doc, getDoc } from "firebase/firestore";
     import { initializeApp, getApps, getApp } from "firebase/app";
     import Chart from 'chart.js/auto';
     import { onMount } from 'svelte';  // <-- Make sure you have this line to import onMount
@@ -9,6 +9,8 @@
     import { firebaseConfig } from "$lib/firebaseConfig";
     const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
     const db = getFirestore(app);
+    const today = getTodayDate();
+const todayTimestamp = Timestamp.fromDate(new Date(today));
 
     let isCollapsed = false;
 
@@ -20,6 +22,8 @@
         todaysAppointments: number;
         todaysPrescriptions: number;
         totalPrescriptions: number;
+        monthlyAppointments: number; 
+
     };
 
     // Initialize stats with default values
@@ -30,6 +34,7 @@
         todaysAppointments: 0,
         todaysPrescriptions: 0,
         totalPrescriptions: 0,
+        monthlyAppointments: 0, 
     };
 
     // State to hold the appointments
@@ -42,6 +47,8 @@
     let dateLabels: string[] = [];
 let totalPatientsPerDay: number[] = []; // Line graph data (number of patients)
 let newAppointmentsPerDay: number[] = []; // Bar graph data (number of appointments)
+let averageNewAppointments: number = 0;
+let averageTotalPatients: number = 0;
 
 
     interface Patient {
@@ -59,6 +66,13 @@ let newAppointmentsPerDay: number[] = []; // Bar graph data (number of appointme
         window.location.href = "/"; // Redirect to landing page
     }
 
+    function calculateAverages() {
+    const totalDays = dateLabels.length;
+    if (totalDays > 0) {
+        averageNewAppointments = newAppointmentsPerDay.reduce((a, b) => a + b, 0) / totalDays;
+        averageTotalPatients = totalPatientsPerDay.reduce((a, b) => a + b, 0) / totalDays;
+    }
+}
     // Helper function to get today's date in 'YYYY-MM-DD' format
     function getTodayDate() {
         const today = new Date();
@@ -104,10 +118,21 @@ let newAppointmentsPerDay: number[] = []; // Bar graph data (number of appointme
         // Now fill the data arrays for the charts
         dateLabels = Object.keys(appointmentCountByDate); // Dates are the labels
         newAppointmentsPerDay = Object.values(appointmentCountByDate); // Count of new appointments per day
-        totalPatientsPerDay = Object.values(patientCountByDate); // Count of total patients per day
+
+        // Calculate cumulative total patients per day
+        totalPatientsPerDay = [];
+        let cumulativeTotal = 0;
+        const sortedDates = Object.keys(patientCountByDate).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+        
+        sortedDates.forEach(date => {
+            cumulativeTotal += patientCountByDate[date] || 0; // Add the number of patients registered on that date
+            totalPatientsPerDay.push(cumulativeTotal); // Push the cumulative total to the array
+        });
+
     } catch (error) {
         console.error("Error fetching data:", error);
     }
+    calculateAverages();
 }
 
 
@@ -188,42 +213,64 @@ function createCharts() {
 
     // Fetch data from Firestore
     async function fetchDashboardData() {
-        try {
-            const today = getTodayDate();
+    try {
+        const today = getTodayDate();
+        console.log("Today's date for query:", today); // Log today's date
 
-            // Fetch all appointments
-            const appointmentsCollection = collection(db, "appointments");
-            const appointmentDocs = await getDocs(appointmentsCollection);
-            stats.newAppointments = appointmentDocs.size;
+        const currentMonth = new Date().getMonth() + 1; // Months are 0-indexed
+        const currentYear = new Date().getFullYear();
 
-            // Fetch today's appointments
-            const todaysAppointmentsQuery = query(appointmentsCollection, where("date", "==", today));
-            const todaysAppointmentsDocs = await getDocs(todaysAppointmentsQuery);
-            stats.todaysAppointments = todaysAppointmentsDocs.size;
+        // Fetch all appointments
+        const appointmentsCollection = collection(db, "appointments");
+        const appointmentDocs = await getDocs(appointmentsCollection);
+        stats.newAppointments = appointmentDocs.size;
 
-            // Fetch total patients
-            const patientsCollection = collection(db, "patientProfiles");
-            const patientDocs = await getDocs(patientsCollection);
-            stats.totalPatients = patientDocs.size;
+      // Fetch today's appointments
+      const todaysAppointmentsQuery = query(appointmentsCollection, where("date", "==", today));
+        const todaysAppointmentsDocs = await getDocs(todaysAppointmentsQuery);
+        
+        // Log the count and the dates of the fetched appointments
+        stats.todaysAppointments = todaysAppointmentsDocs.size; // This line fetches today's appointments
+        console.log("Today's appointments count:", stats.todaysAppointments);
+        
+        todaysAppointmentsDocs.forEach(doc => {
+            console.log("Appointment date:", doc.data().date); // Log each appointment date
+        });
 
-            // Fetch today's patients
-            const todaysPatientsQuery = query(patientsCollection, where("registrationDate", "==", today));
-            const todaysPatientsDocs = await getDocs(todaysPatientsQuery);
-            stats.todaysPatients = todaysPatientsDocs.size;
 
-            // Fetch prescriptions
-            const prescriptionsCollection = collection(db, "prescriptions");
-            const prescriptionDocs = await getDocs(prescriptionsCollection);
-            stats.totalPrescriptions = prescriptionDocs.size;
+        // Fetch total patients
+        const patientsCollection = collection(db, "patientProfiles");
+        const patientDocs = await getDocs(patientsCollection);
+        stats.totalPatients = patientDocs.size;
 
-            // Fetch today's prescriptions
-            const todaysPrescriptionsQuery = query(prescriptionsCollection, where("date", "==", today));
-            const todaysPrescriptionsDocs = await getDocs(todaysPrescriptionsQuery);
-            stats.todaysPrescriptions = todaysPrescriptionsDocs.size;
-        } catch (error) {
-            console.error("Error fetching data:", error);
-        }
+        // Fetch today's patients
+        const todaysPatientsQuery = query(patientsCollection, where("registrationDate", "==", today));
+        const todaysPatientsDocs = await getDocs(todaysPatientsQuery);
+        stats.todaysPatients = todaysPatientsDocs.size;
+
+        // Fetch prescriptions
+        const prescriptionsCollection = collection(db, "prescriptions");
+        const prescriptionDocs = await getDocs(prescriptionsCollection);
+        stats.totalPrescriptions = prescriptionDocs.size;
+
+        // Fetch today's prescriptions
+        const todaysPrescriptionsQuery = query(prescriptionsCollection, where("date", "==", today));
+        const todaysPrescriptionsDocs = await getDocs(todaysPrescriptionsQuery);
+        stats.todaysPrescriptions = todaysPrescriptionsDocs.size;
+
+        // Fetch monthly appointments
+        const monthlyAppointmentsDocs = await getDocs(appointmentsCollection);
+        stats.monthlyAppointments = monthlyAppointmentsDocs.docs.filter(doc => {
+            const data = doc.data();
+            const appointmentDate = new Date(data.date); // Assuming date is in a valid format
+            return appointmentDate.getMonth() + 1 === currentMonth && appointmentDate.getFullYear() === currentYear;
+        }).length; // Count the number of appointments for the current month
+    
+    } catch (error) {
+        console.error("Error fetching data:", error);
+        
     }
+}
 
     // Fetch appointments and patient names
     async function fetchAppointments() {
@@ -275,7 +322,6 @@ function createCharts() {
 
     .sidebar {
         width: 250px;
-        
         height: 100vh;
         position: fixed;
         left: 0;
@@ -289,6 +335,7 @@ function createCharts() {
     }
 
     .content {
+        margin-top: -15px;
         margin-left: 220px;
         flex-grow: 1;
         padding: 20px;
@@ -311,11 +358,12 @@ function createCharts() {
         border-radius: 8px;
         box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         padding: 20px;
-        flex: 1 1 300px;
+        flex: 1 1 calc(25% - 15px); /* Adjust width to fit 4 cards with gap */
         display: flex;
         align-items: center;
         justify-content: space-between;
         cursor: pointer;
+        box-sizing: border-box; /* Include padding in width */
     }
 
     .card .icon {
@@ -337,11 +385,13 @@ function createCharts() {
         color: #555;
     }
     .chart {
-    margin-left: 20px; /* Adjust this value to move the content to the left */
-    width: 80%; /* Adjust the width as needed */
-    height: 500px; /* Adjust the height as needed */
-    padding: 20px; /* Adds padding inside the container */
-}
+        margin-top: -2rem;
+        margin-left: 20px; /* Adjust this value to move the content to the left */
+        width: 78%; /* Adjust the width as needed */
+        height: 300px; /* Adjust the height to make it shorter */
+        padding: 20px; /* Adds padding inside the container */
+    }
+
 
 
 </style>
@@ -352,14 +402,24 @@ function createCharts() {
     </div>
 
     <div class="content">
+        <div class="summary">
+            <h2>Data Summary</h2>
+        </div>
         <div class="cards">
             <button class="card" on:click="{toggleAppointments}" type="button">
                 <span class="icon fas fa-calendar-alt"></span>
                 <div class="text">
                     <h3>{stats.newAppointments}</h3>
-                    <p>New Appointments</p>
+                    <p>Total Appointments</p>
                 </div>
             </button>
+            <div class="card">
+                <span class="icon fas fa-calendar-day"></span> <!-- New card for today's appointments -->
+                <div class="text">
+                    <h3>{stats.monthlyAppointments}</h3>
+                    <p>This Month's Appointments</p>
+                </div>
+            </div>
             <div class="card">
                 <span class="icon fas fa-users"></span>
                 <div class="text">
@@ -374,16 +434,17 @@ function createCharts() {
                     <p>Total Prescriptions</p>
                 </div>
             </div>
+           
+          
+
             <div class="chart">
                 <div>
                     <h2>New Appointments</h2>
                     <canvas id="barChart"></canvas>
                 </div>
-                <div>
-                    <h2>Total Patients</h2>
-                    <canvas id="lineChart"></canvas>
-                </div>
             </div>
+            
         </div>
+        
     </div>
 </div>
