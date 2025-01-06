@@ -718,6 +718,7 @@ onMount(async () => {
         background-color: #f9f9f9;
         box-sizing: border-box;
         color: #333;
+        margin-left:-10px;
     }
     
     .search-input-modern:focus {
@@ -740,6 +741,7 @@ onMount(async () => {
         background-color: #fff;
         color: #333;
         transition: border-color 0.3s ease;
+        margin-left:-10px;
     }
     
     .sort-dropdown:focus {

@@ -344,17 +344,13 @@ async function deleteMedicine(medicine: Medicine) {
         color: #333;
 
     }
+
     .container {
   flex-grow: 1; /* Make this container take the remaining space */
-  overflow-y: scroll; /* Enable vertical scrolling */
+  overflow-y: auto; /* Enable vertical scrolling */
   padding: 1rem;
   margin: 0 auto; 
   max-width: 1200px;
-  scrollbar-width: none; /* For Firefox */
-}
-
-.container::-webkit-scrollbar {
-  display: none; /* For Chrome, Safari, and Edge */
 }
 
 
@@ -385,8 +381,8 @@ async function deleteMedicine(medicine: Medicine) {
     background-color: #4a90e2;
     color: #fff;
     border: none;
-    padding: 10px;
-    border-radius: 50px;
+    padding: 0.3rem;
+    border-radius: 8px;
     cursor: pointer;
     font-size: 1rem;
     font-weight: 600;
@@ -411,7 +407,9 @@ async function deleteMedicine(medicine: Medicine) {
 
 .bg-white:hover {
     
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  background-color: #f5f5f5; 
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.658); 
+    transform: scale(1.01); 
 }
 
 .controls button {
@@ -587,18 +585,7 @@ textarea:focus {
 .edit-popup .confirm-button:hover {
   background-color: #388e3c;
 }
-.medicine-card {
-  box-shadow: -4px 0 0 #3182ce; /* Left-side solid shadow */
-  transition: box-shadow 0.3s ease, transform 0.3s ease; /* Smooth transition for both shadow and scaling */
-  border: 1px solid rgba(49, 130, 206, 0.5); /* 50% transparent */
-
-}
-
-.medicine-card:hover {
-  box-shadow: -4px 0 0 #3182ce; 
-}
-
-
+ 
 
 </style>
 
@@ -612,7 +599,7 @@ textarea:focus {
 
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {#each medicines as medicine, index}
-                <div class="medicine-card bg-white p-4 rounded-lg shadow-md">
+                <div class="bg-white p-4 rounded-lg shadow-md">
                     <div class="w-full h-40 bg-gray-200 mb-4">
                         {#if medicine.imageUrl}
                             <img src={medicine.imageUrl} alt={medicine.name} class="w-full h-full object-cover rounded" />
