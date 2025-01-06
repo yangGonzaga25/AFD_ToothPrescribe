@@ -83,24 +83,25 @@ function filterAndSortPatients() {
     });
 }
 
-
 async function fetchPatients() {
-        try {
-            const querySnapshot = await getDocs(collection(db, "patientProfiles"));
-            patients = querySnapshot.docs.map(doc => ({
-                id: doc.id,
-                name: doc.data().name,
-                lastName: doc.data().lastName,
-                address: doc.data().address,
-                phone: doc.data().phone,
-                age: doc.data().age,
-                isArchived: doc.data().isArchived || false,
-            }));
-            filterPatientsByCategory();
-        } catch (error) {
-            console.error("Error fetching patients:", error);
-        }
+    try {
+        const querySnapshot = await getDocs(collection(db, "patientProfiles"));
+        patients = querySnapshot.docs.map(doc => ({
+            id: doc.id,
+            name: doc.data().name,
+            lastName: doc.data().lastName,
+            address: doc.data().address,
+            phone: doc.data().phone,
+            age: doc.data().age,
+            birthday: doc.data().birthday || '', // Add birthday field, default to empty string if missing
+            isArchived: doc.data().isArchived || false,
+        }));
+        filterPatientsByCategory();
+    } catch (error) {
+        console.error("Error fetching patients:", error);
     }
+}
+
 
     function filterPatientsByCategory() {
     if (currentCategory === 'Active') {
@@ -216,44 +217,50 @@ async function fetchPrescribedPatients() {
     const prescriptionsSnapshot = await getDocs(collection(db, "prescriptions"));
     const prescriptions = prescriptionsSnapshot.docs.map(doc => {
         const data = doc.data();
-        
-        // Extract instructions from medicines array
+
+        // Extract instructions and dosage from medicines array
         const instructions = data.medicines && data.medicines.length > 0 
-            ? data.medicines.map(m => m.instructions).join(", ") 
+            ? data.medicines.map((m: { instructions: any; }) => m.instructions).join(", ") 
             : '';  // If no medicines, return an empty string
         
+        const dosage = data.medicines && data.medicines.length > 0
+            ? data.medicines.map((m: { dosage: any; }) => m.dosage).join(", ")
+            : '';  // If no medicines, return an empty string
+
         return {
             id: doc.id,
             appointmentId: data.appointmentId,  // Store the appointmentId from prescriptions
             instructions: instructions,         // Map instructions correctly
             medications: data.medicines ? data.medicines.map((m: { medicine: any; }) => m.medicine).join(", ") : '',
-            dateVisited: data.createdAt || '',
             prescriber: data.prescriber || '',
-            qtyRefills: data.medicines ? data.medicines.length : 0  // Ensure we handle medicines length
+            dosage: dosage                      // Use dosage instead of qtyRefills
         };
     });
 
-    // Fetch appointments to get patientId
+    // Fetch appointments to get patientId and date
     const appointmentsSnapshot = await getDocs(collection(db, "appointments"));
     const appointments = appointmentsSnapshot.docs.map(doc => {
         const data = doc.data();
         return {
             id: doc.id,
-            patientId: data.patientId  // Extract patientId from appointments
+            patientId: data.patientId,  // Extract patientId from appointments
+            date: data.date || ''       // Extract date from appointments
         };
     });
 
-    // Map prescriptions to the corresponding patient
+    // Map prescriptions to the corresponding patient and date
     prescribedPatients = prescriptions.map(prescription => {
         // Find the appointment that matches the prescription's appointmentId
         const appointment = appointments.find(app => app.id === prescription.appointmentId);
 
-        // If appointment is found, fetch the patientId
+        // If appointment is found, fetch the patientId and date
         const patientId = appointment ? appointment.patientId : null;
+        const dateVisited = appointment ? appointment.date : '';
 
         return {
             ...prescription,
-            patientId: patientId
+            patientId: patientId,
+            dateVisited: dateVisited  // Use the date from the appointments collection
         };
     });
 
@@ -270,6 +277,7 @@ async function fetchPrescribedPatients() {
             fullName: `${patient.name} ${patient.lastName}`,
             address: patient.address,
             phone: patient.phone,
+            birthday: patient.birthday,
             age: patient.age,
             prescriptions: patientPrescriptions
         };
@@ -279,27 +287,15 @@ async function fetchPrescribedPatients() {
 }
 
 
-    onMount(fetchPatients);
+onMount(fetchPatients);
 
-    onMount(async () => {
+onMount(async () => {
     await fetchPatients();
     await fetchPrescribedPatients();
-    filterAndSortPatients(); // Initialize with default settings
+    filterAndSortPatients(); // Initialize with default settings  
 });
 
 
-    // Add new prescription function
-    function addPrescription(id: string | undefined) {
-        // Check if the patient is already prescribed
-        const isPrescribed = prescribedPatients.some(patient => patient.id === id);
-        if (isPrescribed) {
-            alert("This patient has already been prescribed.");
-        } else {
-            if (id) {
-                goto(`/add-prescription1/${id}`);
-            }
-        }
-    }
 
     // Open the modal to view prescriptions of the selected patient
     function openPrescriptionModal(patient: any) {
@@ -385,8 +381,10 @@ async function fetchPrescribedPatients() {
                 <TableHeadCell>Name</TableHeadCell>
                 <TableHeadCell>Address</TableHeadCell>
                 <TableHeadCell>Phone</TableHeadCell>
+                <TableHeadCell>Birth Date</TableHeadCell>
                 <TableHeadCell>Age</TableHeadCell>
                 <TableHeadCell>Actions</TableHeadCell>
+
             </TableHead>
             <TableBody>
                 {#each filteredPatients as patient}
@@ -394,7 +392,9 @@ async function fetchPrescribedPatients() {
                         <TableBodyCell>{patient.name} {patient.lastName}</TableBodyCell>
                         <TableBodyCell>{patient.address}</TableBodyCell>
                         <TableBodyCell>{patient.phone}</TableBodyCell>
+                        <TableBodyCell>{patient.birthday}</TableBodyCell> 
                         <TableBodyCell>{patient.age}</TableBodyCell>
+                        
                         <TableBodyCell>
                             {#if currentCategory === 'Archived'}
                             <Button on:click={() => unarchivePatient(patient.id)}>
@@ -426,8 +426,9 @@ async function fetchPrescribedPatients() {
         <p><strong>Patient Name:</strong> {currentPatient.fullName}</p>
         <p><strong>Address:</strong> {currentPatient.address}</p>
         <p><strong>Phone:</strong> {currentPatient.phone}</p>
+        <p><strong>Birthday:</strong> {currentPatient.birthday}</p>
         <p><strong>Age:</strong> {currentPatient.age}</p>
-
+    
         <!-- Check if prescriptions exist -->
         {#if currentPatient.prescriptions && currentPatient.prescriptions.length > 0}
             <!-- Display all prescriptions in a table -->
@@ -449,7 +450,8 @@ async function fetchPrescribedPatients() {
                             <td>{prescription.medications}</td>
                             <td>{prescription.dateVisited}</td>
                             <td>{prescription.prescriber}</td>
-                            <td>{prescription.qtyRefills}</td>
+                            <td>{prescription.dosage}</td>
+
                         </tr>
                         {/each}
                     </tbody>
