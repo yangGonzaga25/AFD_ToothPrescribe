@@ -242,6 +242,12 @@
                     <span class="text">Medicines List</span>
                 </a>
             </li>
+           <!--  <li>
+                <a href="/allstatus ">
+                    <img class="icon" src="/images/medicinelist.png" alt="Medicines Icon" />
+                    <span class="text">all status</span>
+                </a>
+            </li>-->
         </ul>
 
         <!-- Logout Button -->

@@ -599,6 +599,305 @@ const goToNextSection = () => {
     
 </script>
 
+<Sidebar {isCollapsed} {toggleSidebar} {logout} />
+<div class="container1">
+  {#if loading}
+    <p>Loading data...</p>
+  {:else}
+    <Card class="w-full p-4 shadow-lg">
+      <div class="card-content1">
+        <div>
+          <p class="text-gray-500 text-sm">Total Appointment This Month</p>
+          <p class="text-2xl font-bold text-gray-900">{totalAppointments}</p>
+        </div>
+        <div>
+          <p class="text-gray-500 text-sm">Pending Appointment This Month</p>
+          <p class="text-2xl font-bold text-gray-900">{pendingAppointments}</p>
+        </div>
+        <div>
+          <p class="text-gray-500 text-sm">Completed Appointment This Month</p>
+          <p class="text-2xl font-bold text-gray-900">{completedAppointments}</p>
+        </div>
+      </div>
+    </Card>
+    <div class="appointment-container1">
+      <div class="appointment-header flex justify-between items-center">
+        <p class="appointment-title">
+          {#if currentSection === 0}
+            Pending Appointments
+          {:else}
+            Pending Cancellation Requests
+          {/if}
+        </p>
+        
+        <!-- Right Arrow visible initially (for Pending Appointments) -->
+        {#if currentSection === 0}
+          <button class="bg-gray-300 p-2 rounded" on:click={goToNextSection}>
+            <AngleRightOutline class="h-5 w-5 text-gray-700"/>
+          </button>
+        {:else}
+          <!-- Left Arrow visible after moving to Pending Cancellation Requests -->
+          <button class="bg-gray-300 p-2 rounded" on:click={goToPreviousSection}>
+            <AngleLeftOutline class="h-5 w-5 text-gray-700"/>
+          </button>
+        {/if}
+      </div>
+      {#if currentSection === 0}
+      <!-- Pending Appointments Section -->
+      <div class="pending-appointments">
+        <!-- svelte-ignore a11y_invalid_attribute -->
+        <a class="view-all" href="/allstatus">View All</a>
+    
+        {#if pendingAppointmentsList.length > 0}
+          {#each pendingAppointmentsList as appointment}
+          {#if appointment.status === 'pending'} 
+            <div class="appointment-card">
+              <div class="patient-info">
+                {#each patientProfiles as profile (profile.id)}
+                  {#if profile.id === appointment.patientId}
+                  <div class="patient-details">
+                    <p class="patient-name">{profile.name} {profile.lastName}</p>
+                    <p class="patient-age">{profile.age} years old</p>
+                    <p class="appointment-details">{appointment.date} at {appointment.time}</p>
+                    <p class="service">
+                      Service: {appointment.service}
+                    </p>
+                    {#if appointment.subServices && appointment.subServices.length > 0}
+                      <p class="sub-services">
+                        Sub-services: {appointment.subServices.join(', ')}
+                      </p>
+                    {/if}
+                    
+                    
+                  </div>
+                  {/if}
+                {/each}
+              </div>
+    
+              <div class="appointment-buttons">
+                <button class="bg-blue-100 text-blue-500 px-3 py-1 rounded" on:click={() => updatePendingAppointmentStatus(appointment.id, 'Accepted')}>
+                  Accept
+                </button>
+                <button class="bg-red-100 text-red-500 px-3 py-1 rounded" on:click={() => updatePendingAppointmentStatus(appointment.id, 'Decline')}>
+                  Reject
+                </button>
+              </div>
+            </div>
+            {/if}
+          {/each}
+          
+        {:else}
+          <p class="text-center text-gray-500">No pending appointment requests available.</p>
+        {/if}
+      </div>
+    {:else}
+    
+   <!-- Pending Cancellations Section -->
+   <div class="pending-cancellations">
+    <!-- svelte-ignore a11y_invalid_attribute -->
+    <a class="view-all" href="/allstatus">View All</a>
+
+
+    {#if pendingAppointmentsList.filter(appointment => appointment.cancellationStatus === 'requested').length > 0}
+      {#each pendingAppointmentsList as appointment}
+        {#if appointment.cancellationStatus === 'requested'} <!-- Display only pending cancellations -->
+          <div class="appointment-card">
+            <div class="patient-info">
+                  {#each patientProfiles as profile (profile.id)}
+                    {#if profile.id === appointment.patientId}
+                      <div class="patient-details">
+                        <p class="patient-name">{profile.name} {profile.lastName}</p>
+                        <p class="patient-age">{profile.age} years old</p>
+                        <p class="appointment-details">{appointment.date} at {appointment.time}</p>
+                        <p class="service">Service: {appointment.service}</p>
+                        <p class="sub-service">Sub-services: {appointment.subServices.join(', ')}</p>
+                        <p class="cancellation-reason">Cancellation Reason: {appointment.cancelReason}</p>
+                      </div>
+                    {/if}
+                  {/each}
+                </div>
+        
+                <div class="appointment-buttons">
+                  <button class="bg-green-100 text-green-500 px-3 py-1 rounded" on:click={() => updatePendingCancellationRequestStatus(appointment.id, 'Approved')}>
+                    Approved
+                  </button>
+                  <button class="bg-red-100 text-red-500 px-3 py-1 rounded" on:click={() => updatePendingCancellationRequestStatus(appointment.id, 'Declined')}>
+                    Decline
+                  </button>
+                </div>
+                
+              </div>
+            {/if}
+          {/each}
+        {:else}
+          <p class="text-center text-gray-500">No pending cancellation requests available.</p>
+        {/if}
+      </div>
+     {/if} 
+    </div>
+  {/if}
+
+  </div>
+  <div class="container">
+    <div class="appointments-section">
+      <h2>Accepted Appointments</h2>
+  
+      <Tabs>
+        <TabItem 
+          class={currentView === "today" ? "active" : ""} 
+          on:click={() => currentView = "today"} 
+          title="Today">
+        </TabItem>
+        <TabItem 
+          class={currentView === "week" ? "active" : ""} 
+          on:click={() => currentView = "week"} 
+          title="This Week">
+        </TabItem>
+        <TabItem 
+          class={currentView === "month" ? "active" : ""} 
+          on:click={() => currentView = "month"} 
+          title="This Month">
+        </TabItem>
+      </Tabs>
+  
+ {#if filterAppointments(currentView).length > 0}
+  {#each filterAppointments(currentView) as appointment}
+    <div class="appointment-card">
+      <div class="appointment-details">
+        <p><strong>{appointment.date} at {appointment.time}</strong></p>
+        {#each patientProfiles as profile (profile.id)}
+          {#if profile.id === appointment.patientId}
+            <p>{profile.name} {profile.lastName} ({profile.age} years old)</p>
+          {/if}
+        {/each}
+        <p>Service: {appointment.service}</p>
+
+       <div>
+        <label for="remarks-{appointment.id}">Remarks:</label>
+        <input
+          type="text"
+          id="remarks-{appointment.id}"
+          bind:value={appointment.remarks}
+          placeholder="Enter remarks here"
+        />
+      </div>
+    </div>
+     
+    <div class="appointment-buttons">
+      <button on:click={() => openModal(appointment.id)} class="bg-green-100">
+        Add Prescription
+      </button>
+      <button
+        class="bg-blue-100"
+        on:click={() => handleCompletedAppointment(appointment.id, 'Completed', appointment.remarks || '')}
+      >
+        Completed
+      </button>
+      <button
+        class="bg-red-100"
+        on:click={() => handleCompletedAppointment(appointment.id, 'Missed', appointment.remarks || '')}
+      >
+        Missed
+      </button>
+    </div>
+  </div>
+{/each}
+{:else}
+<div class="no-appointments">
+  <p>No appointments for the selected period.</p>
+</div>
+{/if}
+
+    </div>
+  </div>
+  
+ <!-- Modal with Overlay (Appears when isModalOpen is true) -->
+ {#if isModalOpen}
+ <!-- svelte-ignore a11y_click_events_have_key_events -->
+ <!-- svelte-ignore a11y_no_static_element_interactions -->
+ <div class="modal-overlay" on:click={closeModal} role="dialog" aria-labelledby="modal-title" aria-hidden={!isModalOpen}>
+   <div class="modal-content" on:click|stopPropagation tabindex="-1">
+     <button class="absolute top-2 right-2 text-white text-xl" on:click={closeModal} aria-label="Close Modal"></button>
+     <h2 id="modal-title" class="text-lg font-bold mb-4">
+       Add Prescription for 
+       {selectedAppointment 
+         ? (() => {
+             const patientProfile = patientProfiles.find(profile => profile.id === selectedAppointment?.patientId);
+             return patientProfile ? `${patientProfile.name} ${patientProfile.lastName}` : 'Patient';
+           })() 
+         : 'Patient'}
+     </h2>
+
+     <div class="space-y-8">
+      <!-- Left Side (Prescription Form) -->
+      <form on:submit|preventDefault={submitPrescription} class="w-full space-y-4">
+        <div class="mb-4">
+          <label for="dateVisited" class="block text-sm font-medium mb-1">Date Visited</label>
+          <input id="dateVisited" type="date" bind:value={dateVisited} required class="border rounded p-2 w-full focus:ring-2 focus:ring-green-500" />
+        </div>
+    
+        <div class="mb-4">
+          <label for="availableMedicine" class="block text-sm font-medium mb-1">Available Medicines</label>
+          <select id="availableMedicine" bind:value={selectedMedicine} class="border rounded p-2 w-full focus:ring-2 focus:ring-green-500">
+            <option value="" disabled>Select a medicine</option>
+            {#each availableMedicines as med}
+              <option value={med}>
+                {med.name} (Stock: {med.quantity})
+              </option>
+            {/each}
+          </select>
+        </div>
+        <div class="mb-4">
+          <label for="manualMedication" class="block text-sm font-medium mb-1">Medication</label>
+          <input id="manualMedication" type="text" bind:value={medication} class="border rounded p-2 w-full focus:ring-2 focus:ring-green-500" />
+        </div>
+
+        <div class="mb-4">
+          <label for="qtyRefills" class="block text-sm font-medium mb-1">Qty/Refills</label>
+          <input id="qtyRefills" type="number" bind:value={qtyRefills} class="border rounded p-2 w-full focus:ring-2 focus:ring-green-500" />
+        </div>
+    
+        <div class="mb-4">
+          <label for="instructions" class="block text-sm font-medium mb-1">Instructions</label>
+          <textarea id="instructions" bind:value={instructions} class="border rounded p-2 w-full focus:ring-2 focus:ring-green-500"></textarea>
+        </div>
+      </form>
+     <div class="mb-4">
+          <label for="prescriber" class="block text-sm font-medium mb-1">Prescriber</label>
+          <select
+            id="prescriber"
+            bind:value={prescriber}
+            class="border rounded p-2 w-full focus:ring-2 focus:ring-green-500"
+          >
+            <option value="Alfred Domingo">Alfred Domingo</option>
+            <option value="Fernalyn Domingo">Fernalyn Domingo</option>
+          </select>
+        </div>
+      </div>
+ 
+    <!-- Submit Prescription -->
+    <div class="flex justify-end mt-6">
+      <button
+        type="button"
+        class="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500"
+        on:click={() => {
+          // Add both selected and manual medicines before submitting
+          addSelectedMedicine();
+          addManualMedicine();
+    
+          // Submit the prescription after adding medicines
+          submitPrescription();
+        }}
+      >
+        Submit Prescription
+      </button>
+    </div>
+    
+   </div>
+  </div>
+    
+{/if}
+
 <style>
   /* Position both containers on the right side and adjust width */
   .container1 {
@@ -857,303 +1156,3 @@ const goToNextSection = () => {
   }
 
 </style>
-
-
-<Sidebar {isCollapsed} {toggleSidebar} {logout} />
-<div class="container1">
-  {#if loading}
-    <p>Loading data...</p>
-  {:else}
-    <Card class="w-full p-4 shadow-lg">
-      <div class="card-content1">
-        <div>
-          <p class="text-gray-500 text-sm">Total Appointment This Month</p>
-          <p class="text-2xl font-bold text-gray-900">{totalAppointments}</p>
-        </div>
-        <div>
-          <p class="text-gray-500 text-sm">Pending Appointment This Month</p>
-          <p class="text-2xl font-bold text-gray-900">{pendingAppointments}</p>
-        </div>
-        <div>
-          <p class="text-gray-500 text-sm">Completed Appointment This Month</p>
-          <p class="text-2xl font-bold text-gray-900">{completedAppointments}</p>
-        </div>
-      </div>
-    </Card>
-    <div class="appointment-container1">
-      <div class="appointment-header flex justify-between items-center">
-        <p class="appointment-title">
-          {#if currentSection === 0}
-            Pending Appointments
-          {:else}
-            Pending Cancellation Requests
-          {/if}
-        </p>
-        
-        <!-- Right Arrow visible initially (for Pending Appointments) -->
-        {#if currentSection === 0}
-          <button class="bg-gray-300 p-2 rounded" on:click={goToNextSection}>
-            <AngleRightOutline class="h-5 w-5 text-gray-700"/>
-          </button>
-        {:else}
-          <!-- Left Arrow visible after moving to Pending Cancellation Requests -->
-          <button class="bg-gray-300 p-2 rounded" on:click={goToPreviousSection}>
-            <AngleLeftOutline class="h-5 w-5 text-gray-700"/>
-          </button>
-        {/if}
-      </div>
-      {#if currentSection === 0}
-      <!-- Pending Appointments Section -->
-      <div class="pending-appointments">
-        <!-- svelte-ignore a11y_invalid_attribute -->
-        <a class="view-all" href="#">View All</a>
-    
-        {#if pendingAppointmentsList.length > 0}
-          {#each pendingAppointmentsList as appointment}
-          {#if appointment.status === 'pending'} 
-            <div class="appointment-card">
-              <div class="patient-info">
-                {#each patientProfiles as profile (profile.id)}
-                  {#if profile.id === appointment.patientId}
-                  <div class="patient-details">
-                    <p class="patient-name">{profile.name} {profile.lastName}</p>
-                    <p class="patient-age">{profile.age} years old</p>
-                    <p class="appointment-details">{appointment.date} at {appointment.time}</p>
-                    <p class="service">
-                      Service: {appointment.service}
-                    </p>
-                    {#if appointment.subServices && appointment.subServices.length > 0}
-                      <p class="sub-services">
-                        Sub-services: {appointment.subServices.join(', ')}
-                      </p>
-                    {/if}
-                    
-                    
-                  </div>
-                  {/if}
-                {/each}
-              </div>
-    
-              <div class="appointment-buttons">
-                <button class="bg-blue-100 text-blue-500 px-3 py-1 rounded" on:click={() => updatePendingAppointmentStatus(appointment.id, 'Accepted')}>
-                  Accept
-                </button>
-                <button class="bg-red-100 text-red-500 px-3 py-1 rounded" on:click={() => updatePendingAppointmentStatus(appointment.id, 'Decline')}>
-                  Reject
-                </button>
-              </div>
-            </div>
-            {/if}
-          {/each}
-          
-        {:else}
-          <p class="text-center text-gray-500">No pending appointment requests available.</p>
-        {/if}
-      </div>
-    {:else}
-    
-   <!-- Pending Cancellations Section -->
-   <div class="pending-cancellations">
-    <!-- svelte-ignore a11y_invalid_attribute -->
-    <a class="view-all" href="#">View All</a>
-
-    {#if pendingAppointmentsList.filter(appointment => appointment.cancellationStatus === 'requested').length > 0}
-      {#each pendingAppointmentsList as appointment}
-        {#if appointment.cancellationStatus === 'requested'} <!-- Display only pending cancellations -->
-          <div class="appointment-card">
-            <div class="patient-info">
-                  {#each patientProfiles as profile (profile.id)}
-                    {#if profile.id === appointment.patientId}
-                      <div class="patient-details">
-                        <p class="patient-name">{profile.name} {profile.lastName}</p>
-                        <p class="patient-age">{profile.age} years old</p>
-                        <p class="appointment-details">{appointment.date} at {appointment.time}</p>
-                        <p class="service">Service: {appointment.service}</p>
-                        <p class="sub-service">Sub-services: {appointment.subServices.join(', ')}</p>
-                        <p class="cancellation-reason">Cancellation Reason: {appointment.cancelReason}</p>
-                      </div>
-                    {/if}
-                  {/each}
-                </div>
-        
-                <div class="appointment-buttons">
-                  <button class="bg-green-100 text-green-500 px-3 py-1 rounded" on:click={() => updatePendingCancellationRequestStatus(appointment.id, 'Approved')}>
-                    Approved
-                  </button>
-                  <button class="bg-red-100 text-red-500 px-3 py-1 rounded" on:click={() => updatePendingCancellationRequestStatus(appointment.id, 'Declined')}>
-                    Decline
-                  </button>
-                </div>
-                
-              </div>
-            {/if}
-          {/each}
-        {:else}
-          <p class="text-center text-gray-500">No pending cancellation requests available.</p>
-        {/if}
-      </div>
-     {/if} 
-    </div>
-  {/if}
-
-  </div>
-  <div class="container">
-    <div class="appointments-section">
-      <h2>Accepted Appointments</h2>
-  
-      <Tabs>
-        <TabItem 
-          class={currentView === "today" ? "active" : ""} 
-          on:click={() => currentView = "today"} 
-          title="Today">
-        </TabItem>
-        <TabItem 
-          class={currentView === "week" ? "active" : ""} 
-          on:click={() => currentView = "week"} 
-          title="This Week">
-        </TabItem>
-        <TabItem 
-          class={currentView === "month" ? "active" : ""} 
-          on:click={() => currentView = "month"} 
-          title="This Month">
-        </TabItem>
-      </Tabs>
-  
- {#if filterAppointments(currentView).length > 0}
-  {#each filterAppointments(currentView) as appointment}
-    <div class="appointment-card">
-      <div class="appointment-details">
-        <p><strong>{appointment.date} at {appointment.time}</strong></p>
-        {#each patientProfiles as profile (profile.id)}
-          {#if profile.id === appointment.patientId}
-            <p>{profile.name} {profile.lastName} ({profile.age} years old)</p>
-          {/if}
-        {/each}
-        <p>Service: {appointment.service}</p>
-
-       <div>
-        <label for="remarks-{appointment.id}">Remarks:</label>
-        <input
-          type="text"
-          id="remarks-{appointment.id}"
-          bind:value={appointment.remarks}
-          placeholder="Enter remarks here"
-        />
-      </div>
-    </div>
-     
-    <div class="appointment-buttons">
-      <button on:click={() => openModal(appointment.id)} class="bg-green-100">
-        Add Prescription
-      </button>
-      <button
-        class="bg-blue-100"
-        on:click={() => handleCompletedAppointment(appointment.id, 'Completed', appointment.remarks || '')}
-      >
-        Completed
-      </button>
-      <button
-        class="bg-red-100"
-        on:click={() => handleCompletedAppointment(appointment.id, 'Missed', appointment.remarks || '')}
-      >
-        Missed
-      </button>
-    </div>
-  </div>
-{/each}
-{:else}
-<div class="no-appointments">
-  <p>No appointments for the selected period.</p>
-</div>
-{/if}
-
-    </div>
-  </div>
-  
- <!-- Modal with Overlay (Appears when isModalOpen is true) -->
- {#if isModalOpen}
- <!-- svelte-ignore a11y_click_events_have_key_events -->
- <!-- svelte-ignore a11y_no_static_element_interactions -->
- <div class="modal-overlay" on:click={closeModal} role="dialog" aria-labelledby="modal-title" aria-hidden={!isModalOpen}>
-   <div class="modal-content" on:click|stopPropagation tabindex="-1">
-     <button class="absolute top-2 right-2 text-white text-xl" on:click={closeModal} aria-label="Close Modal"></button>
-     <h2 id="modal-title" class="text-lg font-bold mb-4">
-       Add Prescription for 
-       {selectedAppointment 
-         ? (() => {
-             const patientProfile = patientProfiles.find(profile => profile.id === selectedAppointment?.patientId);
-             return patientProfile ? `${patientProfile.name} ${patientProfile.lastName}` : 'Patient';
-           })() 
-         : 'Patient'}
-     </h2>
-
-     <div class="space-y-8">
-      <!-- Left Side (Prescription Form) -->
-      <form on:submit|preventDefault={submitPrescription} class="w-full space-y-4">
-        <div class="mb-4">
-          <label for="dateVisited" class="block text-sm font-medium mb-1">Date Visited</label>
-          <input id="dateVisited" type="date" bind:value={dateVisited} required class="border rounded p-2 w-full focus:ring-2 focus:ring-green-500" />
-        </div>
-    
-        <div class="mb-4">
-          <label for="availableMedicine" class="block text-sm font-medium mb-1">Available Medicines</label>
-          <select id="availableMedicine" bind:value={selectedMedicine} class="border rounded p-2 w-full focus:ring-2 focus:ring-green-500">
-            <option value="" disabled>Select a medicine</option>
-            {#each availableMedicines as med}
-              <option value={med}>
-                {med.name} (Stock: {med.quantity})
-              </option>
-            {/each}
-          </select>
-        </div>
-        <div class="mb-4">
-          <label for="manualMedication" class="block text-sm font-medium mb-1">Medication</label>
-          <input id="manualMedication" type="text" bind:value={medication} class="border rounded p-2 w-full focus:ring-2 focus:ring-green-500" />
-        </div>
-
-        <div class="mb-4">
-          <label for="qtyRefills" class="block text-sm font-medium mb-1">Qty/Refills</label>
-          <input id="qtyRefills" type="number" bind:value={qtyRefills} class="border rounded p-2 w-full focus:ring-2 focus:ring-green-500" />
-        </div>
-    
-        <div class="mb-4">
-          <label for="instructions" class="block text-sm font-medium mb-1">Instructions</label>
-          <textarea id="instructions" bind:value={instructions} class="border rounded p-2 w-full focus:ring-2 focus:ring-green-500"></textarea>
-        </div>
-      </form>
-     <div class="mb-4">
-          <label for="prescriber" class="block text-sm font-medium mb-1">Prescriber</label>
-          <select
-            id="prescriber"
-            bind:value={prescriber}
-            class="border rounded p-2 w-full focus:ring-2 focus:ring-green-500"
-          >
-            <option value="Alfred Domingo">Alfred Domingo</option>
-            <option value="Fernalyn Domingo">Fernalyn Domingo</option>
-          </select>
-        </div>
-      </div>
- 
-    <!-- Submit Prescription -->
-    <div class="flex justify-end mt-6">
-      <button
-        type="button"
-        class="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500"
-        on:click={() => {
-          // Add both selected and manual medicines before submitting
-          addSelectedMedicine();
-          addManualMedicine();
-    
-          // Submit the prescription after adding medicines
-          submitPrescription();
-        }}
-      >
-        Submit Prescription
-      </button>
-    </div>
-    
-   </div>
-  </div>
-    
- 
-{/if}
