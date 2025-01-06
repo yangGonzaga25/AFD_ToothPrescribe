@@ -220,7 +220,7 @@
             <li>
               
                 <a href="/appointment">
-                    <img class="icon" src="/images/icon-patient.png" alt="Patient Icon" />
+                    <img class="icon" src="/images/appointment.png" alt="Patient Icon" />
                     <span class="text">Appointment</span>
                 </a>
             </li>
@@ -232,13 +232,13 @@
             </li>
             <li>
                 <a href="./prescription">
-                    <img class="icon" src="/images/icon-prescriptions.png" alt="Prescriptions Icon" />
+                    <img class="icon" src="/images/prescription1.png" alt="Prescriptions Icon" />
                     <span class="text">Prescriptions</span>
                 </a>
             </li>
             <li>
                 <a href="/medicine-list">
-                    <img class="icon" src="/images/icon-medicines.png" alt="Medicines Icon" />
+                    <img class="icon" src="/images/medicinelist.png" alt="Medicines Icon" />
                     <span class="text">Medicines List</span>
                 </a>
             </li>
