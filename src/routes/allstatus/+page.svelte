@@ -131,10 +131,10 @@
                 <div class="flex items-center">
                     <img src="/images/logo(landing).png" alt="Sun with dental logo" class="w-24 h-18 mr-4" />
                     <div>
-                        <h1 class="font-bold text-lg">AF DOMINIC</h1>
+                        <h1 class="font-bold text-lg">AFDomingo</h1>
                         <p class="text-sm">DENTAL CLINIC</p>
                         <p class="text-sm">#46 12th Street, Corner Gordon Ave New Kalalake</p>
-                        <p class="text-sm">afdominicdentalclinic@gmail.com</p>
+                        <p class="text-sm">afdomingodentalclinic@gmail.com</p>
                         <p class="text-sm">0932 984 9554</p>
                     </div>
                 </div>

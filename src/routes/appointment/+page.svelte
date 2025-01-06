@@ -742,23 +742,26 @@ const goToNextSection = () => {
     <div class="appointments-section">
       <h2>Accepted Appointments</h2>
   
-      <Tabs>
-        <TabItem 
-          class={currentView === "today" ? "active" : ""} 
-          on:click={() => currentView = "today"} 
-          title="Today">
-        </TabItem>
-        <TabItem 
-          class={currentView === "week" ? "active" : ""} 
-          on:click={() => currentView = "week"} 
-          title="This Week">
-        </TabItem>
-        <TabItem 
-          class={currentView === "month" ? "active" : ""} 
-          on:click={() => currentView = "month"} 
-          title="This Month">
-        </TabItem>
-      </Tabs>
+      <div class="tabs">
+        <button 
+          type="button"
+          class="tab-item {currentView === 'today' ? 'active' : ''}" 
+          on:click={() => currentView = 'today'}>
+          Today
+        </button>
+        <button 
+          type="button"
+          class="tab-item {currentView === 'week' ? 'active' : ''}" 
+          on:click={() => currentView = 'week'}>
+          This Week
+        </button>
+        <button 
+          type="button"
+          class="tab-item {currentView === 'month' ? 'active' : ''}" 
+          on:click={() => currentView = 'month'}>
+          This Month
+        </button>
+      </div>
   
  {#if filterAppointments(currentView).length > 0}
   {#each filterAppointments(currentView) as appointment}
@@ -913,6 +916,8 @@ const goToNextSection = () => {
     max-height: 94vh; /* Increased max-height to 90% of the viewport height */
     overflow-y: auto; /* Allows scrolling if the content overflows */
     margin-bottom: 20px; /* Added margin to avoid overlapping with bottom content */
+    box-shadow: 0 -4px 0 #0288d1, 0 2px 4px rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
   }
 
   .card-content1 {
@@ -928,7 +933,7 @@ const goToNextSection = () => {
     background-color: transparent;
     padding: 12px;
     border-radius: 10px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 -4px 0 #0288d1, 0 2px 4px rgba(0, 0, 0, 0.1);
     max-height: 90vh; /* Increased max-height to 90% of the viewport height */
     overflow-y: auto; /* Ensures the container becomes scrollable if the content overflows */
     margin-bottom: 20px; /* Adds some space between the container and next content */
@@ -960,6 +965,7 @@ const goToNextSection = () => {
     border-radius: 8px;
     background-color: transparent;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    
   }
 
   .patient-info {
@@ -986,14 +992,22 @@ const goToNextSection = () => {
   }
 
   .container {
-    position: fixed;
-    bottom: 20px;
-    left: 230px;
-    max-height: 90%; /* Adjusted height for better visibility */
-    min-height: 600px; /* Increased minimum height */
-    overflow-y: auto; /* Ensures scrolling if content exceeds container size */
-    width: 650px;
-  }
+  position: fixed;
+  bottom: 20px;
+  left: 230px;
+  max-height: 90%; /* Adjusted height for better visibility */
+  min-height: 600px; /* Increased minimum height */
+  overflow-y: scroll; /* Enables vertical scrolling */
+  width: 650px;
+  box-shadow: 0 -4px 0 #0288d1, 0 2px 4px rgba(0, 0, 0, 0.1);
+  
+  scrollbar-width: none; /* For Firefox */
+}
+
+.container::-webkit-scrollbar {
+  display: none; /* For Chrome, Safari, and Edge */
+}
+
 
   .appointments-section {
     padding: 20px;
@@ -1001,6 +1015,7 @@ const goToNextSection = () => {
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     margin-bottom: 20px;
+    
   }
 
   .appointment-card {
@@ -1010,6 +1025,9 @@ const goToNextSection = () => {
     border-radius: 8px;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
     min-height: 100px;
+    box-shadow: -4px 0 0 #3182ce;
+    border: 1px solid rgba(49, 130, 206, 0.5); /* 50% transparent */
+
   }
 
   .appointment-details {
@@ -1024,12 +1042,46 @@ const goToNextSection = () => {
 
   .appointment-buttons button {
     padding: 8px 16px;
-    border-radius: 5px;
+    border-radius: 50px;
     cursor: pointer;
     border: none;
     font-size: 0.9rem;
     font-weight: 600;
   }
+  /* Style for the active tab */
+  .appointments-section .tab-item {
+  padding: 10px 20px;
+  cursor: pointer;
+  border-radius: 50px;
+  transition: background-color 0.3s ease;
+  display: inline-block; /* Makes it look tab-like */
+  text-align: center;
+  color: black; /* Default inactive text color */
+  margin-bottom: 10px;
+}
+
+.appointments-section .tab-item.active {
+  background-color: #4caf50; /* Active background color */
+  color: white; /* Active text color */
+}
+
+.appointments-section .tab-item:not(.active):hover {
+  background-color: #ddd; /* Hover effect for inactive tabs */
+}
+
+.view-all {
+  color: #3182ce; /* Blue color for the link */
+  text-decoration: none; /* Removes the underline */
+  font-weight: bold; /* Makes the text bold */
+  font-size: 16px; /* Adjusts the font size */
+  transition: color 0.3s ease; /* Smooth transition for color on hover */
+}
+
+.view-all:hover {
+  color: #2563eb; /* Darker blue on hover */
+  text-decoration: none; /* Underline on hover */
+}
+
 
   .bg-blue-100 {
     background-color: #e0f7fa;

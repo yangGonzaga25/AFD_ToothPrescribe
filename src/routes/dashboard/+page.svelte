@@ -440,7 +440,7 @@ async function fetchPrescriptionsData() {
     .card {
         background: white;
         border-radius: 8px;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 -4px 0 #0288d1, 0 2px 4px rgba(0, 0, 0, 0.1);
         padding: 20px;
         flex: 1 1 calc(25% - 15px); /* Adjust width to fit 4 cards with gap */
         display: flex;
