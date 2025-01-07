@@ -49,7 +49,6 @@
         line-height: 1.2;
     }
 
- 
     .right-section {
         flex: 1; 
         display: flex;
@@ -66,10 +65,25 @@
         max-width: 180%; 
         max-height: 80%; 
         object-fit: contain; 
+        animation: fadeInBounce 2s ease-out; /* Add animation */
+    }
+
+    /* Keyframes for the fade-in and bounce effect */
+    @keyframes fadeInBounce {
+        0% {
+            opacity: 0;
+            transform: scale(0.8) translateY(-50px);
+        }
+        50% {
+            opacity: 1;
+            transform: scale(1.05) translateY(10px);
+        }
+        100% {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+        }
     }
 </style>
-
-
 
 <header>
     <nav>
@@ -80,11 +94,8 @@
 <main>
     <div class="left-section">
         <h1>Dental Patient Records and Prescription Management System for Streamlined Dental Care and Treatment Tracking</h1>
-        
     </div>
     <div class="right-section" style="width: 100%; height: auto;">
         <img src="/images/logo(landing).png" alt="Landing Logo" height="400" />
-      </div>
+    </div>
 </main>
-
-
