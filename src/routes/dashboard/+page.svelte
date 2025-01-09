@@ -1,4 +1,5 @@
 <script lang="ts">
+
     import Sidebar from '../sidenav/+page.svelte'; // Import the sidebar component
     import { Timestamp, getFirestore, collection, getDocs, query, where, updateDoc, doc, getDoc } from "firebase/firestore";
     import { initializeApp, getApps, getApp } from "firebase/app";
@@ -9,8 +10,13 @@
     import { firebaseConfig } from "$lib/firebaseConfig";
     const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
     const db = getFirestore(app);
-   
+    import * as XLSX from 'xlsx';
+    import { jsPDF } from 'jspdf'; // Import jsPDF
+import autoTable from 'jspdf-autotable'; // Import autoTable
+    
     let isCollapsed = false;
+
+ 
 
     // Define a type for the stats
     type Stats = {
@@ -50,6 +56,8 @@ let patients: any[] = [];
 let prescriptions: any[] = [];
 let monthlyAppointments: any[] = [];
 let openTable: 'patients' | 'appointments' | 'prescriptions' | 'monthlyAppointments' | null = null;
+let exportType = "excel";
+
 
 interface PrescriptionData {
     id?: string; // Optional if you don't want to require it
@@ -87,6 +95,281 @@ interface PatientData {
         const day = String(today.getDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
     }
+
+    async function generateReport() {
+    console.log("Fetching data for the report...");
+
+    // Fetch data from Firebase
+    await fetchAppointments();
+    await fetchPatients();
+    prescriptions = await fetchPrescriptionsData(); 
+
+    console.log("Fetched Appointments:", appointments);
+    console.log("Fetched Patients:", patients);
+    console.log("Fetched Prescriptions:", prescriptions);
+
+   // After data is fetched, download the report based on the selected type
+   if (exportType === "pdf") {
+        downloadPdfReport();  // Generate PDF if selected
+    } else {
+        downloadExcelReport();  // Generate Excel if selected
+    }
+}
+
+async function downloadPdfReport() { 
+    console.log("Generating PDF Report...");
+
+    const doc = new jsPDF();
+
+    // Fetch appointments and patient profiles in parallel
+    const appointmentIdToDetails: { [key: string]: any } = {};  // To store appointment details by appointmentId
+    const patientIdToName: { [key: string]: string } = {};  // To store patient name by patientId
+
+    // Fetch all appointments
+    const appointmentsSnapshot = await getDocs(collection(db, "appointments"));
+    appointmentsSnapshot.forEach((doc) => {
+        const appointment = doc.data();
+        appointmentIdToDetails[doc.id] = appointment;  // Store the appointment by its ID
+    });
+
+    // Fetch all patient profiles
+    const patientProfilesSnapshot = await getDocs(collection(db, "patientProfiles"));
+    patientProfilesSnapshot.forEach((doc) => {
+        const patient = doc.data();
+        patientIdToName[patient.id] = `${patient.name} ${patient.lastName}`;  // Store the patient name by patientId
+    });
+
+    // Add title for the report
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Data Report Summary', 105, 10, { align: 'center' });
+
+    // Add an empty line for spacing
+    let y = 20;
+
+    // Add Prescriptions Data
+    if (prescriptions.length > 0) {
+        console.log("Preparing Prescriptions Data...");
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Prescriptions', 10, y);  // Title for prescriptions section
+        y += 10;
+
+        const prescriptionData = prescriptions.flatMap((prescription) => {
+            const appointment = appointmentIdToDetails[prescription.appointmentId];
+            if (appointment) {
+                const patientName = patientIdToName[appointment.patientId] || "Unknown"; 
+
+                return (prescription.medicines || []).map((medicine: { medicine: any; dosage: any; instructions: any; }) => ({
+                    "Patient Name": patientName,
+                    "Medicine Name": medicine.medicine || "N/A",
+                    "Dosage": medicine.dosage || "N/A",
+                    "Instructions": medicine.instructions || "N/A",
+                    "Prescriber": prescription.prescriber || "N/A",
+                }));
+            }
+            return [];
+        });
+
+        if (prescriptionData.length > 0) {
+            (doc as any).autoTable({
+                head: [['Patient Name', 'Medicine Name', 'Dosage', 'Instructions', 'Prescriber']],
+                body: prescriptionData.map((item) => [
+                    item["Patient Name"],
+                    item["Medicine Name"],
+                    item["Dosage"],
+                    item["Instructions"],
+                    item["Prescriber"]
+                ]),
+                startY: y,
+                theme: 'striped',
+                headStyles: {
+                    fillColor: [102, 204, 102],
+                    textColor: [255, 255, 255],
+                    fontSize: 12,
+                },
+                bodyStyles: {
+                    fontSize: 10,
+                    cellPadding: 5,
+                },
+            });
+            y = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;  // Type assertion here
+        }
+    }
+
+    // Add Appointments Data
+    if (appointments.length > 0) {
+        console.log("Preparing Appointments Data...");
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Appointments', 10, y);  // Title for appointments section
+        y += 10;
+
+        (doc as any).autoTable({
+            head: [['Patient Name', 'Date', 'Time', 'Service', 'Subservice', 'Status']],
+            body: appointments.map((appointment) => {
+                const patientName = patientIdToName[appointment.patientId] || "Unknown";
+                return [
+                    patientName,
+                    appointment.date || "N/A",
+                    appointment.time || "N/A",
+                    appointment.service || "N/A",
+                    appointment.subServices?.join(", ") || "N/A",
+                    appointment.status || "N/A",
+                ];
+            }),
+            startY: y,
+            theme: 'striped',
+            headStyles: {
+                fillColor: [102, 133, 244],
+                textColor: [255, 255, 255],
+                fontSize: 12,
+            },
+            bodyStyles: {
+                fontSize: 10,
+                cellPadding: 5,
+            },
+        });
+        y = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;  // Type assertion here
+    }
+
+    // Add Patients Data
+    if (patients.length > 0) {
+        console.log("Preparing Patients Data...");
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Patients', 10, y);  // Title for patients section
+        y += 10;
+
+        (doc as any).autoTable({
+            head: [['Name', 'Age', 'Birthday', 'Gender', 'Phone Number']],
+            body: patients.map((patient) => [
+                `${patient.name} ${patient.lastName}`,
+                patient.age || "N/A",
+                patient.birthday || "N/A",
+                patient.gender || "N/A",
+                patient.phone || "N/A",
+            ]),
+            startY: y,
+            theme: 'striped',
+            headStyles: {
+                fillColor: [66, 133, 244],
+                textColor: [255, 255, 255],
+                fontSize: 12,
+            },
+            bodyStyles: {
+                fontSize: 10,
+                cellPadding: 5,
+            },
+        });
+        y = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;  // Type assertion here
+    }
+
+    // Save the PDF
+    doc.save('Data_Report.pdf');
+}
+
+async function downloadExcelReport() {
+    console.log("Generating Excel Report...");
+
+    const workbook = XLSX.utils.book_new();
+
+    // Fetch appointments and patient profiles in parallel
+    const appointmentIdToDetails: { [key: string]: any } = {};  // To store appointment details by appointmentId
+    const patientIdToName: { [key: string]: string } = {};  // To store patient name by patientId
+
+    // Fetch all appointments
+    const appointmentsSnapshot = await getDocs(collection(db, "appointments"));
+    appointmentsSnapshot.forEach((doc) => {
+        const appointment = doc.data();
+        appointmentIdToDetails[doc.id] = appointment;  // Store the appointment by its ID
+    });
+
+    // Fetch all patient profiles
+    const patientProfilesSnapshot = await getDocs(collection(db, "patientProfiles"));
+    patientProfilesSnapshot.forEach((doc) => {
+        const patient = doc.data();
+        patientIdToName[patient.id] = `${patient.name} ${patient.lastName}`;  // Store the patient name by patientId
+    });
+
+    // Check if data exists in prescriptions
+    if (prescriptions.length > 0) {
+        console.log("Preparing Prescriptions Sheet...");
+        const prescriptionData = prescriptions.flatMap((prescription) => {
+            // Get the corresponding appointment by appointmentId
+            const appointment = appointmentIdToDetails[prescription.appointmentId];
+            if (appointment) {
+                const patientName = patientIdToName[appointment.patientId] || "Unknown"; // Use patientId to get patient name
+
+                // Map medicines in the prescription
+                return (prescription.medicines || []).map((medicine: { medicine: any; dosage: any; instructions: any; }) => ({
+                    "Patient Name": patientName,  // Use the derived patient name
+                    "Medicine Name": medicine.medicine || "N/A",
+                    "Dosage": medicine.dosage || "N/A",
+                    "Instructions": medicine.instructions || "N/A",
+                    "Prescriber": prescription.prescriber || "N/A",
+                }));
+            } else {
+                console.log(`No appointment found for prescription with appointmentId: ${prescription.appointmentId}`);
+                return []; // Skip this prescription if no appointment is found
+            }
+        });
+
+        if (prescriptionData.length > 0) {
+            const prescriptionSheet = XLSX.utils.json_to_sheet(prescriptionData);
+            XLSX.utils.book_append_sheet(workbook, prescriptionSheet, "Prescriptions");
+        } else {
+            console.log("No valid prescription data found.");
+        }
+    } else {
+        console.log("No data found in Prescriptions.");
+    }
+
+    // Check if data exists in appointments
+    if (appointments.length > 0) {
+        console.log("Preparing Appointments Sheet...");
+        const appointmentSheet = XLSX.utils.json_to_sheet(
+            appointments.map(appointment => {
+                const patientName = patientIdToName[appointment.patientId] || "Unknown"; // Use patientId to get patient name
+
+                return {
+                    "Patient Name": patientName,  // Use the fetched patient name
+                    "Date": appointment.date || "N/A",
+                    "Time": appointment.time || "N/A",
+                    "Service": appointment.service || "N/A",
+                    "Subservice": appointment.subServices?.join(", ") || "N/A",
+                    "Status": appointment.status || "N/A",
+                };
+            })
+        );
+        XLSX.utils.book_append_sheet(workbook, appointmentSheet, "Appointments");
+    } else {
+        console.log("No data found in Appointments.");
+    }
+
+    // Check if data exists in patients
+    if (patients.length > 0) {
+        console.log("Preparing Patients Sheet...");
+        const patientSheet = XLSX.utils.json_to_sheet(
+            patients.map(patient => ({
+                "Name": `${patient.name} ${patient.lastName}` || "Unknown",
+                "Age": patient.age || "N/A",
+                "Birthday": patient.birthday || "N/A",
+                "Gender": patient.gender || "N/A",
+                "Phone Number": patient.phone || "N/A",
+            }))
+        );
+        XLSX.utils.book_append_sheet(workbook, patientSheet, "Patients");
+    } else {
+        console.log("No data found in Patients.");
+    }
+
+    console.log("Writing Excel file...");
+    XLSX.writeFile(workbook, "Data_Report.xlsx");
+}
+
+
+
  // Function to open a specific table and close others
  function openTableHandler(table: 'patients' | 'appointments' | 'prescriptions' | 'monthlyAppointments') {
         if (openTable === table) {
@@ -335,25 +618,65 @@ async function fetchAppointmentsData() {
     openTableHandler('appointments'); // Open appointments table
 }
 
+// async function fetchPrescriptionsData() {
+//     const prescriptionsCollection = collection(db, "prescriptions");
+//     const prescriptionDocs = await getDocs(prescriptionsCollection);
+
+//     prescriptions = await Promise.all(prescriptionDocs.docs.map(async (prescriptionDoc) => {
+//         const prescriptionData = prescriptionDoc.data() as PrescriptionData; // Cast to PrescriptionData
+//         const patientId = prescriptionData.patientId; // Assuming you have a patientId field
+
+//         const patientDocRef = doc(db, "patientProfiles", patientId);
+//         const patientDocSnap = await getDoc(patientDocRef);
+//         const patientData = patientDocSnap.data() as PatientData; // Cast to PatientData
+//         const patientName = patientData ? `${patientData.name} ${patientData.lastName}` : "Unknown Patient";
+
+//         return { id: prescriptionDoc.id, ...prescriptionData, patientName }; // Include patient name
+//     }));
+
+//     console.log("Fetched prescriptions:", prescriptions); // Log fetched prescriptions
+//     openTableHandler('prescriptions'); // Open prescriptions table
+// }
+
 async function fetchPrescriptionsData() {
-    const prescriptionsCollection = collection(db, "prescriptions");
-    const prescriptionDocs = await getDocs(prescriptionsCollection);
+    console.log("Fetching prescriptions...");
 
-    prescriptions = await Promise.all(prescriptionDocs.docs.map(async (prescriptionDoc) => {
-        const prescriptionData = prescriptionDoc.data() as PrescriptionData; // Cast to PrescriptionData
-        const patientId = prescriptionData.patientId; // Assuming you have a patientId field
+    try {
+        // Fetch prescriptions from the 'prescriptions' collection
+        const prescriptionsSnapshot = await getDocs(collection(db, "prescriptions"));
+        
+        // Check if any prescriptions were fetched
+        if (prescriptionsSnapshot.empty) {
+            console.log("No prescriptions found!");
+            return [];
+        }
 
-        const patientDocRef = doc(db, "patientProfiles", patientId);
-        const patientDocSnap = await getDoc(patientDocRef);
-        const patientData = patientDocSnap.data() as PatientData; // Cast to PatientData
-        const patientName = patientData ? `${patientData.name} ${patientData.lastName}` : "Unknown Patient";
+        // Map through the fetched documents to extract prescription data
+        const prescriptions = prescriptionsSnapshot.docs.map(doc => {
+            const data = doc.data();
 
-        return { id: prescriptionDoc.id, ...prescriptionData, patientName }; // Include patient name
-    }));
+            console.log("Prescription Data:", data);
 
-    console.log("Fetched prescriptions:", prescriptions); // Log fetched prescriptions
-    openTableHandler('prescriptions'); // Open prescriptions table
+            // Return the prescription details in a structured format
+            return {
+                id: doc.id,  // Prescription document ID
+                appointmentId: data.appointmentId || 'No appointment ID',  // Handle missing appointmentId
+                prescriber: data.prescriber || 'No prescriber',  // Handle missing prescriber
+                medicines: data.medicines || [],  // Ensure medicines is an array even if empty
+                createdAt: data.createdAt || 'No creation date',  // Handle missing createdAt
+            };
+        });
+
+        console.log("Fetched Prescriptions:", prescriptions);
+        return prescriptions;
+
+    } catch (error) {
+        console.error("Error fetching prescriptions:", error);
+        return [];
+    }
 }
+
+
     // Fetch appointments and patient names
     async function fetchAppointments() {
     console.log("Fetching appointments..."); // Add this line
@@ -507,6 +830,21 @@ tbody tr:hover {
     transition: box-shadow 0.3s ease, border 0.3s ease; /* Smooth transition */
     outline: none; /* Remove default outline */
 }
+.download-button {
+    margin-top: 10px;
+    padding: 10px 15px;
+    font-size: 16px;
+    color: #fff;
+    background-color: #007bff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.download-button:hover {
+    background-color: #0056b3;
+}
+
 </style>
 
 <div class="dashboard">
@@ -517,6 +855,13 @@ tbody tr:hover {
     <div class="content">
         <div class="summary">
             <h2>Data Summary</h2>
+            <select bind:value="{exportType}" class="download-select">
+                <option value="excel">Excel</option>
+                <option value="pdf">PDF</option>
+            </select>
+            <button on:click="{generateReport}" class="download-button">Download Report</button>
+            
+
         </div>
         <div class="cards">
            
