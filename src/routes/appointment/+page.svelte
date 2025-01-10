@@ -163,7 +163,11 @@ const fetchAppointments = async () => {
   pendingAppointmentsList = appointments.filter(appointment => 
     appointment.status === '' && appointment.cancellationStatus === 'requested'
   );
-  
+
+  const rescheduleRequests = appointments.filter(appointment => 
+    appointment.status === 'Reschedule Requested'
+  );
+
   const appointmentRequests = appointments.filter(appointment => !appointment.cancellationStatus);
 
   totalAppointments = appointments.length;
@@ -172,12 +176,11 @@ const fetchAppointments = async () => {
     app.status === 'pending' && !app.cancellationStatus
   ).length;
 
-
   completedAppointments = appointments.filter(app => 
     app.status === 'Completed'
   ).length;
 
-  pendingAppointmentsList = [...pendingAppointmentsList, ...appointmentRequests];
+  pendingAppointmentsList = [...pendingAppointmentsList, ...appointmentRequests, ...rescheduleRequests];
 };
 
 const fetchPatientProfiles = async () => {
@@ -511,17 +514,18 @@ const submitPrescription = async () => {
 const closeModal = () => {
     isModalOpen = false; // Close the modal
   };
-const goToNextSection = () => {
-    if (currentSection < 1) {
-      currentSection++;
-    }
-  };
+  function goToNextSection() {
+  if (currentSection < 2) {
+    currentSection += 1;
+  }
+}
 
-  const goToPreviousSection = () => {
-    if (currentSection > 0) {
-      currentSection--;
-    }
-  };
+function goToPreviousSection() {
+  if (currentSection > 0) {
+    currentSection -= 1;
+  }
+}
+
   // Sidebar toggle
   let isCollapsed = false;
   function toggleSidebar() {
@@ -629,7 +633,50 @@ const goToNextSection = () => {
     });
   }
 };
+async function acceptReschedule(appointmentId: string) {
+    const result = await Swal.fire({
+      title: 'Accept Reschedule?',
+      text: 'Are you sure you want to accept this reschedule request?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, Accept',
+      cancelButtonText: 'Cancel'
+    });
 
+    if (result.isConfirmed) {
+      // Update the appointment status
+      const appointment = pendingAppointmentsList.find(app => app.id === appointmentId);
+      if (appointment) {
+        appointment.status = 'Rescheduled';
+        await Swal.fire('Accepted!', 'The reschedule request has been accepted.', 'success');
+      } else {
+        await Swal.fire('Error!', 'Appointment not found.', 'error');
+      }
+    }
+  }
+
+  // Reject reschedule request
+  async function rejectReschedule(appointmentId: string) {
+    const result = await Swal.fire({
+      title: 'Reject Reschedule?',
+      text: 'Are you sure you want to reject this reschedule request?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, Reject',
+      cancelButtonText: 'Cancel'
+    });
+
+    if (result.isConfirmed) {
+      // Update the appointment status
+      const appointment = pendingAppointmentsList.find(app => app.id === appointmentId);
+      if (appointment) {
+        appointment.status = 'Reschedule Rejected';
+        await Swal.fire('Rejected!', 'The reschedule request has been rejected.', 'success');
+      } else {
+        await Swal.fire('Error!', 'Appointment not found.', 'error');
+      }
+    }
+  }
 
 
     
@@ -666,18 +713,29 @@ const goToNextSection = () => {
           {/if}
         </p>
         
-        <!-- Right Arrow visible initially (for Pending Appointments) -->
-        {#if currentSection === 0}
-          <button class="bg-gray-300 p-2 rounded" on:click={goToNextSection}>
-            <AngleRightOutline class="h-5 w-5 text-gray-700"/>
-          </button>
-        {:else}
-          <!-- Left Arrow visible after moving to Pending Cancellation Requests -->
-          <button class="bg-gray-300 p-2 rounded" on:click={goToPreviousSection}>
-            <AngleLeftOutline class="h-5 w-5 text-gray-700"/>
-          </button>
-        {/if}
+        <div class="navigation-buttons">
+          {#if currentSection === 0}
+            <!-- Right Arrow visible initially (for Pending Appointments) -->
+            <button class="bg-gray-300 p-2 rounded" on:click={goToNextSection}>
+              <AngleRightOutline class="h-5 w-5 text-gray-700" />
+            </button>
+          {:else if currentSection === 1}
+            <!-- Arrows for other sections -->
+            <button class="bg-gray-300 p-2 rounded" on:click={goToPreviousSection}>
+              <AngleLeftOutline class="h-5 w-5 text-gray-700" />
+            </button>
+            <button class="bg-gray-300 p-2 rounded" on:click={goToNextSection}>
+              <AngleRightOutline class="h-5 w-5 text-gray-700" />
+            </button>
+          {:else}
+            <!-- Left Arrow visible for the last section -->
+            <button class="bg-gray-300 p-2 rounded" on:click={goToPreviousSection}>
+              <AngleLeftOutline class="h-5 w-5 text-gray-700" />
+            </button>
+          {/if}
+        </div>
       </div>
+      
       {#if currentSection === 0}
       <!-- Pending Appointments Section -->
       <div class="pending-appointments">
@@ -704,7 +762,6 @@ const goToNextSection = () => {
                       </p>
                     {/if}
                     
-                    
                   </div>
                   {/if}
                 {/each}
@@ -729,6 +786,67 @@ const goToNextSection = () => {
           <p class="text-center text-gray-500">No pending appointment requests available.</p>
         {/if}
       </div>
+
+      {:else if currentSection === 1}
+      <!-- Reschedule Requests Section -->
+      <div class="reschedule-requests">
+        {#if pendingAppointmentsList.filter(a => a.status === 'Reschedule Requested').length > 0}
+          {#each pendingAppointmentsList as appointment}
+            {#if appointment.status === 'Reschedule Requested'}
+              <div class="appointment-card bg-white shadow-md rounded p-4 mb-4">
+                <!-- Patient Info -->
+                <div class="patient-info">
+                  {#each patientProfiles as profile (profile.id)}
+                    {#if profile.id === appointment.patientId}
+                      <div class="patient-details">
+                        <p class="patient-name text-lg font-semibold">
+                          {profile.name} {profile.lastName}
+                        </p>
+                        <p class="patient-age text-gray-600">
+                          {profile.age} years old
+                        </p>
+                        <p class="text-gray-600">
+                          Requesting to reschedule
+                        </p>
+                        <p class="text-sm text-gray-500">
+                       Requested Schedule: {appointment.date} at {appointment.time}
+                        </p>
+                        <p class="service text-sm text-gray-500">
+                          Service: {appointment.service}
+                        </p>
+                        {#if appointment.subServices && appointment.subServices.length > 0}
+                          <p class="sub-services text-sm text-gray-500">
+                            Sub-services: {appointment.subServices.join(', ')}
+                          </p>
+                        {/if}
+                      </div>
+                    {/if}
+                  {/each}
+                </div>
+                <!-- Actions -->
+                <div class="appointment-actions flex justify-end space-x-2">
+                  <button
+                    class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600"
+                    on:click={() => acceptReschedule(appointment.id)}
+                  >
+                    Accept
+                  </button>
+                  <button
+                    class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+                    on:click={() => rejectReschedule(appointment.id)}
+                  >
+                    Reject
+                  </button>
+                </div>
+              </div>
+            {/if}
+          {/each}
+       
+      
+    {:else}
+      <p class="text-gray-500 text-center">No reschedule requests available.</p>
+    {/if}
+  </div>
     {:else}
     
    <!-- Pending Cancellations Section -->
@@ -806,6 +924,7 @@ const goToNextSection = () => {
 {/if}
 
   </div>
+  
   <div class="container">
     <div class="appointments-section">
       <h2>Accepted Appointments</h2>
