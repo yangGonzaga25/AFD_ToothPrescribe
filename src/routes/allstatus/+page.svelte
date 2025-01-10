@@ -37,6 +37,7 @@
         service: string;
         cancellationStatus?: 'pending' | 'Approved' | 'Declined' | 'requested' | null;
         status: "pending" | "Declined" | "Missed" | "confirmed" | "Completed" | "cancelled" | "Accepted" | "cancellationRequested" | "";
+        reason?: string; // Add reason field
     }
 
     let appointments: Appointment[] = [];
@@ -83,7 +84,8 @@
                 date: appointmentData.date || '',
                 time: appointmentData.time || '',
                 service: appointmentData.service || '',
-                status: appointmentData.status || 'pending'
+                status: appointmentData.status || 'pending',
+                reason: appointmentData.reason || ''
             };
         });
 
@@ -197,10 +199,10 @@
                         <TableHeadCell>Date</TableHeadCell>
                         <TableHeadCell>Time</TableHeadCell>
                         <TableHeadCell>Status</TableHeadCell>
-                        <!-- <TableHeadCell>Actions</TableHeadCell>-->
+                        <TableHeadCell>Reason</TableHeadCell>
                     </TableHead>
                     <TableBody>
-                        {#each filteredAppointments as { appointmentId, patientData, date, time, service, status, cancellationStatus } (appointmentId)}
+                        {#each filteredAppointments as { appointmentId, patientData, date, time, service, status, reason } (appointmentId)}
                             <TableBodyRow>
                                 <TableBodyCell>{`${patientData.name} ${patientData.lastname}`}</TableBodyCell>
                                 <TableBodyCell>{patientData.age}</TableBodyCell>
@@ -220,10 +222,11 @@
                                         <span>{status}</span>
                                     {/if}
                                 </TableBodyCell>
-                             
+                                <TableBodyCell>{reason || 'N/A'}</TableBodyCell> <!-- Correctly access reason -->
                             </TableBodyRow>
                         {/each}
                     </TableBody>
+                    
                 </Table>
             </div>
 
