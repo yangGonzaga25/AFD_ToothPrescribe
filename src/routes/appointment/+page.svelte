@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { getFirestore, collection, getDocs, query, where, updateDoc, doc, addDoc } from 'firebase/firestore';
+  import { getFirestore,  onSnapshot, collection, getDocs, query, where, updateDoc, doc, addDoc } from 'firebase/firestore';
   import { initializeApp } from 'firebase/app';
   import { firebaseConfig } from '$lib/firebaseConfig';
   import { Card, Tabs, TabItem } from 'flowbite-svelte';
@@ -285,6 +285,7 @@ const updatePendingAppointmentStatus = async (appointmentId: string, newStatus: 
     }
   });
 };
+
 const openModal = (appointmentId: string) => {
   // Find the selected appointment by its ID
   selectedAppointment = appointments.find(appointment => appointment.id === appointmentId) ?? null;
@@ -538,20 +539,39 @@ function goToPreviousSection() {
   }
 
 
-  const updatePendingCancellationRequestStatus = async (id: string, status: string) => {
-    try {
-      const appointmentRef = doc(db, 'appointments', id);
-      await updateDoc(appointmentRef, { cancellationStatus: status });
+  const updateCancellationStatus = async (id: string, status: string, appointments: any[], fetchAppointments: Function) => {
+  try {
+    const appointmentRef = doc(db, 'appointments', id);
+    await updateDoc(appointmentRef, { cancellationStatus: status });
 
-      appointments = appointments.map(appointment =>
-        appointment.id === id
-          ? { ...appointment, cancellationStatus: status }
-          : appointment
-      );
+    // Update local appointments list
+    appointments = appointments.map(appointment =>
+      appointment.id === id
+        ? { ...appointment, cancellationStatus: status }
+        : appointment
+    );
 
-      await fetchAppointments();
-    } catch (error) {
-      console.error('Error updating cancellation request status:', error);
+    // Refresh appointments list
+    await fetchAppointments();
+    Swal.fire('Success', `Appointment status updated to "${status}"`, 'success');
+  } catch (error) {
+    console.error('Error updating cancellation request status:', error);
+    Swal.fire('Error', 'Failed to update the status. Please try again.', 'error');
+  }
+};
+const confirmStatusChange = async (id: string, status: string) => {
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: `Do you want to mark this appointment as "${status}"?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: status === 'Approved' ? '#28a745' : '#dc3545',
+      cancelButtonColor: '#6c757d',
+      confirmButtonText: 'Yes, proceed!',
+    });
+
+    if (result.isConfirmed) {
+      updateCancellationStatus(id, status, appointments, fetchAppointments);
     }
   };
 
@@ -633,50 +653,148 @@ function goToPreviousSection() {
     });
   }
 };
+
 async function acceptReschedule(appointmentId: string) {
-    const result = await Swal.fire({
-      title: 'Accept Reschedule?',
-      text: 'Are you sure you want to accept this reschedule request?',
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonText: 'Yes, Accept',
-      cancelButtonText: 'Cancel'
-    });
+  const result = await Swal.fire({
+    title: 'Accept Reschedule?',
+    text: 'Are you sure you want to accept this reschedule request?',
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'Yes, Accept',
+    cancelButtonText: 'Cancel',
+  });
 
-    if (result.isConfirmed) {
-      // Update the appointment status
-      const appointment = pendingAppointmentsList.find(app => app.id === appointmentId);
-      if (appointment) {
-        appointment.status = 'Rescheduled';
-        await Swal.fire('Accepted!', 'The reschedule request has been accepted.', 'success');
-      } else {
-        await Swal.fire('Error!', 'Appointment not found.', 'error');
+  if (result.isConfirmed) {
+    const appointment = pendingAppointmentsList.find(app => app.id === appointmentId);
+
+    if (!appointment) {
+      await Swal.fire('Error!', 'Appointment not found.', 'error');
+      return;
+    }
+
+    if (!appointment.date || !appointment.time) {
+      console.error("Invalid appointment data:", appointment);
+      await Swal.fire('Error!', 'Invalid appointment data. Please try again.', 'error');
+      return;
+    }
+
+    try {
+      const appointmentsRef = collection(db, "appointments");
+      const conflictQuery = query(
+        appointmentsRef,
+        where("date", "==", appointment.date),
+        where("time", "==", appointment.time),
+        where("status", "in", ["Accepted", "Pending"])
+      );
+      const conflictSnapshot = await getDocs(conflictQuery);
+
+      if (!conflictSnapshot.empty) {
+        await Swal.fire(
+          'Conflict Detected!',
+          'Another appointment already exists in the requested time slot. Cannot accept this reschedule.',
+          'error'
+        );
+        return;
       }
+
+      // Update appointment status
+      const appointmentRef = doc(db, "appointments", appointmentId);
+      await updateDoc(appointmentRef, { status: 'Rescheduled' });
+
+      // Remove the accepted appointment from the local list
+      pendingAppointmentsList = pendingAppointmentsList.filter(app => app.id !== appointmentId);
+
+      // Notify success
+      await Swal.fire('Accepted!', 'The reschedule request has been accepted.', 'success');
+    } catch (error) {
+      console.error("Error handling reschedule:", error);
+      await Swal.fire('Error!', 'An unexpected error occurred.', 'error');
     }
   }
+}
 
-  // Reject reschedule request
-  async function rejectReschedule(appointmentId: string) {
-    const result = await Swal.fire({
-      title: 'Reject Reschedule?',
-      text: 'Are you sure you want to reject this reschedule request?',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: 'Yes, Reject',
-      cancelButtonText: 'Cancel'
-    });
 
-    if (result.isConfirmed) {
-      // Update the appointment status
-      const appointment = pendingAppointmentsList.find(app => app.id === appointmentId);
-      if (appointment) {
-        appointment.status = 'Reschedule Rejected';
-        await Swal.fire('Rejected!', 'The reschedule request has been rejected.', 'success');
-      } else {
-        await Swal.fire('Error!', 'Appointment not found.', 'error');
+async function rejectReschedule(appointmentId: string, previousDate: string | undefined, previousTime: string | undefined) {
+  // Validate required parameters
+  if (!previousDate || !previousTime) {
+    console.error("Error: Missing required parameters - previousDate or previousTime is undefined.");
+    await Swal.fire('Error!', 'Invalid appointment data. Please try again.', 'error');
+    return;
+  }
+
+  const result = await Swal.fire({
+    title: 'Reject Reschedule?',
+    text: 'Are you sure you want to reject this reschedule request?',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Yes, Reject',
+    cancelButtonText: 'Cancel',
+  });
+
+  if (result.isConfirmed) {
+    try {
+      // Check for conflicts in the previous date and time
+      const appointmentsRef = collection(db, "appointments");
+      const conflictQuery = query(
+        appointmentsRef,
+        where("date", "==", previousDate),
+        where("time", "==", previousTime),
+        where("status", "in", ["Accepted", "Pending"]) // Adjust status values to match Firestore data
+      );
+      const conflictSnapshot = await getDocs(conflictQuery);
+
+      const appointmentRef = doc(db, "appointments", appointmentId);
+      if (!conflictSnapshot.empty) {
+        // Conflict exists, update status to 'Rejected'
+        await updateDoc(appointmentRef, { status: 'Rejected' });
+
+        // Use onSnapshot to listen for real-time updates
+        const appointmentsQuery = query(collection(db, "appointments"));
+        onSnapshot(appointmentsQuery, (snapshot) => {
+          const updatedAppointments = [];
+          snapshot.forEach((doc) => {
+            const data = { id: doc.id, ...doc.data() };
+            updatedAppointments.push(data);
+          });
+          // Update local state with real-time data
+          pendingAppointmentsList = updatedAppointments;
+        });
+
+        await Swal.fire(
+          'Rejected!',
+          'The reschedule request has been rejected as the original time slot is no longer available.',
+          'info'
+        );
+        return;
       }
+
+      // No conflict, proceed to update the status to 'Accepted'
+      await updateDoc(appointmentRef, { status: 'Accepted' });
+
+      // Use onSnapshot to listen for real-time updates
+      const appointmentsQuery = query(collection(db, "appointments"));
+      onSnapshot(appointmentsQuery, (snapshot) => {
+        const updatedAppointments = [];
+        snapshot.forEach((doc) => {
+          const data = { id: doc.id, ...doc.data() };
+          updatedAppointments.push(data);
+        });
+        // Update local state with real-time data
+        pendingAppointmentsList = updatedAppointments;
+      });
+
+      await Swal.fire(
+        'Rejected and Reverted!',
+        'The reschedule request has been rejected, and the appointment has been reverted to Accepted.',
+        'success'
+      );
+    } catch (error) {
+      console.error("Error checking for conflicts or updating status: ", error);
+      await Swal.fire('Error!', 'An unexpected error occurred. Please try again later.', 'error');
     }
   }
+}
+
 
 
     
@@ -811,6 +929,7 @@ async function acceptReschedule(appointmentId: string) {
       </div>
 
       {:else if currentSection === 1}
+      <a class="view-all" href="/allstatus">View All</a>
       <!-- Reschedule Requests Section -->
       <div class="reschedule-requests">
         {#if pendingAppointmentsList.filter(a => a.status === 'Reschedule Requested').length > 0}
@@ -847,19 +966,20 @@ async function acceptReschedule(appointmentId: string) {
                   {/each}
                 </div>
                 <!-- Actions -->
-                <div class="appointment-actions flex justify-end space-x-2">
+                <div class="appointment-buttons">
                   <button
-                    class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600"
+                    class="bg-green-100 text-green-500 px-3 py-1 rounded hover:bg-green-600"
                     on:click={() => acceptReschedule(appointment.id)}
                   >
                     Accept
                   </button>
                   <button
-                    class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
-                    on:click={() => rejectReschedule(appointment.id)}
-                  >
-                    Reject
-                  </button>
+                  class="bg-red-100 text-red-500 px-3 py-1 rounded hover:bg-red-600"
+                  on:click={() => rejectReschedule(appointment.id, appointment.date, appointment.time)}
+                >
+                  Reject
+                </button>
+                
                 </div>
               </div>
             {/if}
@@ -898,10 +1018,16 @@ async function acceptReschedule(appointmentId: string) {
                 </div>
         
                 <div class="appointment-buttons">
-                  <button class="bg-green-100 text-green-500 px-3 py-1 rounded" on:click={() => updatePendingCancellationRequestStatus(appointment.id, 'Approved')}>
+                  <button
+                    class="bg-green-100 text-green-500 px-3 py-1 rounded"
+                    on:click={() => confirmStatusChange(appointment.id, 'Approved')}
+                  >
                     Approved
                   </button>
-                  <button class="bg-red-100 text-red-500 px-3 py-1 rounded" on:click={() => updatePendingCancellationRequestStatus(appointment.id, 'Declined')}>
+                  <button
+                    class="bg-red-100 text-red-500 px-3 py-1 rounded"
+                    on:click={() => confirmStatusChange(appointment.id, 'Declined')}
+                  >
                     Decline
                   </button>
                 </div>
@@ -1237,14 +1363,14 @@ async function acceptReschedule(appointmentId: string) {
 
   .container {
   position: fixed;
-  bottom: 20px;
+  top: 0; /* Positions the container at the top */
   left: 230px;
-  max-height: 90%; /* Adjusted height for better visibility */
-  min-height: 600px; /* Increased minimum height */
+  height: 700px; /* Fixed height */
+  width: 57%; /* Adjust width as needed */
   overflow-y: scroll; /* Enables vertical scrolling */
-  width: 650px;
-  box-shadow: 0 -4px 0 #0288d1, 0 2px 4px rgba(0, 0, 0, 0.1);
-  
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.1), 0 2px 4px #0288d1;
+  /* Adjusted shadow to match the top placement */
+
   scrollbar-width: none; /* For Firefox */
 }
 
