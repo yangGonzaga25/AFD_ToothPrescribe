@@ -1061,7 +1061,7 @@ const goToNextSection = () => {
 }
 
 .appointments-section .tab-item.active {
-  background-color: #4caf50; /* Active background color */
+  background: linear-gradient(90deg, #08B8F3, #005b80); /* Gradient background */
   color: white; /* Active text color */
 }
 

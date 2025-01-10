@@ -389,33 +389,27 @@ async function downloadExcelReport() {
 async function fetchGraphData() {
     try {
         const appointmentsCollection = collection(db, "appointments");
-        const patientCollection = collection(db, "patientProfiles");
-
         const appointmentDocs = await getDocs(appointmentsCollection);
-        const patientDocs = await getDocs(patientCollection);
 
         const appointmentCountByDate: Record<string, number> = {};
-        const patientCountByDate: Record<string, number> = {};
+        const currentMonth = new Date().getMonth() + 1; // Months are 0-indexed
+        const currentYear = new Date().getFullYear();
 
-        // Loop through appointments and group them by date
+        // Loop through appointments and group them by date for the current month
         appointmentDocs.forEach((doc) => {
             const data = doc.data();
-            const date = data.date; // Assuming the date is stored in a field called "date"
-            if (appointmentCountByDate[date]) {
-                appointmentCountByDate[date]++;
-            } else {
-                appointmentCountByDate[date] = 1;
-            }
-        });
+            const appointmentDate = new Date(data.date); // Assuming the date is stored in a field called "date"
+            const appointmentMonth = appointmentDate.getMonth() + 1; // Get month (0-indexed)
+            const appointmentYear = appointmentDate.getFullYear(); // Get year
 
-        // Loop through patients and group them by registration date
-        patientDocs.forEach((doc) => {
-            const data = doc.data();
-            const date = data.registrationDate; // Assuming patients have a "registrationDate" field
-            if (patientCountByDate[date]) {
-                patientCountByDate[date]++;
-            } else {
-                patientCountByDate[date] = 1;
+            // Check if the appointment is in the current month and year
+            if (appointmentMonth === currentMonth && appointmentYear === currentYear) {
+                const dateString = appointmentDate.toISOString().split('T')[0]; // Format date as 'YYYY-MM-DD'
+                if (appointmentCountByDate[dateString]) {
+                    appointmentCountByDate[dateString]++;
+                } else {
+                    appointmentCountByDate[dateString] = 1;
+                }
             }
         });
 
@@ -426,9 +420,32 @@ async function fetchGraphData() {
         // Calculate cumulative total patients per day
         totalPatientsPerDay = [];
         let cumulativeTotal = 0;
-        const sortedDates = Object.keys(patientCountByDate).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
-        
-        sortedDates.forEach(date => {
+
+        // Fetch patients for the current month
+        const patientCollection = collection(db, "patientProfiles");
+        const patientDocs = await getDocs(patientCollection);
+        const patientCountByDate: Record<string, number> = {};
+
+        // Loop through patients and group them by registration date for the current month
+        patientDocs.forEach((doc) => {
+            const data = doc.data();
+            const registrationDate = new Date(data.registrationDate); // Assuming patients have a "registrationDate" field
+            const registrationMonth = registrationDate.getMonth() + 1; // Get month (0-indexed)
+            const registrationYear = registrationDate.getFullYear(); // Get year
+
+            // Check if the registration is in the current month and year
+            if (registrationMonth === currentMonth && registrationYear === currentYear) {
+                const dateString = registrationDate.toISOString().split('T')[0]; // Format date as 'YYYY-MM-DD'
+                if (patientCountByDate[dateString]) {
+                    patientCountByDate[dateString]++;
+                } else {
+                    patientCountByDate[dateString] = 1;
+                }
+            }
+        });
+
+        // Calculate cumulative total patients per day
+        dateLabels.forEach(date => {
             cumulativeTotal += patientCountByDate[date] || 0; // Add the number of patients registered on that date
             totalPatientsPerDay.push(cumulativeTotal); // Push the cumulative total to the array
         });
@@ -437,7 +454,6 @@ async function fetchGraphData() {
         console.error("Error fetching data:", error);
     }
 }
-
 
 function createCharts() {
     // Sort dateLabels in ascending order based on date
@@ -618,26 +634,6 @@ async function fetchAppointmentsData() {
     openTableHandler('appointments'); // Open appointments table
 }
 
-// async function fetchPrescriptionsData() {
-//     const prescriptionsCollection = collection(db, "prescriptions");
-//     const prescriptionDocs = await getDocs(prescriptionsCollection);
-
-//     prescriptions = await Promise.all(prescriptionDocs.docs.map(async (prescriptionDoc) => {
-//         const prescriptionData = prescriptionDoc.data() as PrescriptionData; // Cast to PrescriptionData
-//         const patientId = prescriptionData.patientId; // Assuming you have a patientId field
-
-//         const patientDocRef = doc(db, "patientProfiles", patientId);
-//         const patientDocSnap = await getDoc(patientDocRef);
-//         const patientData = patientDocSnap.data() as PatientData; // Cast to PatientData
-//         const patientName = patientData ? `${patientData.name} ${patientData.lastName}` : "Unknown Patient";
-
-//         return { id: prescriptionDoc.id, ...prescriptionData, patientName }; // Include patient name
-//     }));
-
-//     console.log("Fetched prescriptions:", prescriptions); // Log fetched prescriptions
-//     openTableHandler('prescriptions'); // Open prescriptions table
-// }
-
 async function fetchPrescriptionsData() {
     console.log("Fetching prescriptions...");
 
@@ -743,9 +739,10 @@ async function fetchPrescriptionsData() {
 
     .content {
         margin-top: -15px;
-        margin-left: 220px;
+        margin-left: 12.8rem;
         flex-grow: 1;
-        padding: 20px;
+        padding-right: 1rem;
+        padding-top: 0.3rem;
         overflow: auto;
         transition: margin-left 0.3s;
     }
@@ -761,18 +758,47 @@ async function fetchPrescriptionsData() {
     }
 
     .card {
-        background: white;
-        border-radius: 8px;
-        box-shadow: 0 -4px 0 #0288d1, 0 2px 4px rgba(0, 0, 0, 0.1);
-        padding: 20px;
-        flex: 1 1 calc(25% - 15px); /* Adjust width to fit 4 cards with gap */
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        cursor: pointer;
-        box-sizing: border-box; /* Include padding in width */
-    }
+        margin-top: -0.6rem;
+        margin-bottom: -0.7rem;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 1rem;
+    flex: 1 1 calc(25% - 15px);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    box-sizing: border-box;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
 
+.card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 6px;
+    background: linear-gradient(90deg, #08B8F3, #005b80);
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15);
+}
+
+.card:focus {
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(2, 136, 209, 0.5);
+    border: 1px solid #0288d1;
+    transition: box-shadow 0.2s ease, border 0.2s ease;
+}
     .card .icon {
         font-size: 2rem;
         color: black;
@@ -824,27 +850,29 @@ tbody tr:hover {
     background-color: #ddd; /* Light gray on hover */
 }
 
-.card:focus {
-    box-shadow: 0 0 0 4px rgba(0, 123, 255, 0.5); /* Soft blue glow */
-    border: 2px solid #007BFF; /* Optional: Add a border for additional emphasis */
-    transition: box-shadow 0.3s ease, border 0.3s ease; /* Smooth transition */
-    outline: none; /* Remove default outline */
-}
+
 .download-button {
-    margin-top: 10px;
-    padding: 10px 15px;
-    font-size: 16px;
-    color: #fff;
-    background-color: #007bff;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    margin-bottom: 10px;
+       background: linear-gradient(90deg, #08B8F3, #005b80);
+        color: rgb(255, 255, 255);
+        font-family: 'Roboto', sans-serif;
+        font-weight: 550;
+        padding: 0.5rem 1rem;
+        border-radius: 0.3rem;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.582);
+        display: flex;
+        align-items: center;
+        transition: background 0.3s ease, transform 0.2s ease;
+        border: none;
+        cursor: pointer;
+        outline: none;
+        margin-top: -2.2rem;
+        margin-left: 4.2rem;
+        margin-bottom: 1rem;
 }
 
 .download-button:hover {
-    background-color: #0056b3;
-}
+    background: linear-gradient(90deg, #005b80, #08B8F3);
+        transform: translateY(2px);}
 
 </style>
 

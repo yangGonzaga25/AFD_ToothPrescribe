@@ -35,19 +35,23 @@
     }
     
     function sortPatients(column: string) {
-        if (sortColumn === column) {
-            sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
-        } else {
-            sortColumn = column;
-            sortDirection = 'asc';
-        }
+    if (sortColumn === column) {
+        sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+        sortColumn = column;
+        sortDirection = 'asc';
+    }
 
-        filteredPatients.sort((a, b) => {
+    filteredPatients.sort((a, b) => {
+        if (column === 'age') {
+            return sortDirection === 'asc' ? a.age - b.age : b.age - a.age;
+        } else {
             if (a[column] < b[column]) return sortDirection === 'asc' ? -1 : 1;
             if (a[column] > b[column]) return sortDirection === 'asc' ? 1 : -1;
             return 0;
-        });
-    }
+        }
+    });
+}
     
     function filterPatients() {
     const currentList = currentCategory === 'Active'
@@ -72,15 +76,10 @@
 }
 
 function filterAndSortPatients() {
-    // Perform initial filtering based on the category
-    filterPatients();
 
-    // Apply sorting
-    filteredPatients.sort((a, b) => {
-        if (a.name < b.name) return sortDirection === 'asc' ? -1 : 1;
-        if (a.name > b.name) return sortDirection === 'asc' ? 1 : -1;
-        return 0;
-    });
+    filterPatients();
+    sortPatients(sortColumn);
+
 }
 
 async function fetchPatients() {
@@ -118,6 +117,8 @@ function switchCategory(category: 'Active' | 'Archived') {
     searchTerm = ''; // Reset search term when switching categories
     filterAndSortPatients();
 }
+
+
 async function archivePatient(id: string) {
     try {
         // Show confirmation dialog
@@ -318,19 +319,7 @@ onMount(async () => {
 
   
         <div class="container">
-            <!-- Header -->
-            <div class="flex justify-between items-start mb-4">
-                <div class="flex items-center">
-                    <img src="/images/logo(landing).png" alt="Sun with dental logo" class="w-24 h-18 mr-4" />
-                    <div>
-                        <h1 class="font-bold text-lg">AFDomingo</h1>
-                        <p class="text-sm">DENTAL CLINIC</p>
-                        <p class="text-sm">#46 12th Street, Corner Gordon Ave New Kalalake</p>
-                        <p class="text-sm">afdomingodentalclinic@gmail.com</p>
-                        <p class="text-sm">0932 984 9554</p>
-                    </div>
-                </div>
-            </div>
+            
      
         <!-- Search Bar -->
         <div class="search-and-sort-container">
@@ -357,9 +346,11 @@ onMount(async () => {
                     class="search-input-modern"
                 />
             </div>
-            <select bind:value={sortDirection} on:change={filterAndSortPatients} class="sort-dropdown">
-                <option value="asc">Sort by Name: A–Z</option>
-                <option value="desc">Sort by Name: Z–A</option>
+            <select bind:value={sortColumn} on:change={filterAndSortPatients} class="sort-dropdown">
+                <option value="name">Sort by Name: A–Z</option>
+                <option value="name" data-sort="desc">Sort by Name: Z–A</option>
+                <option value="age">Sort by Age: Ascending</option>
+                <option value="age" data-sort="desc">Sort by Age: Descending</option>
             </select>
         </div>
         <div class="category-switch">
@@ -486,9 +477,10 @@ onMount(async () => {
        :global(.content) {
             flex-grow: 1;
             overflow: auto;
+            padding-left: 0.5rem;
             margin-left: -10rem;
             transition: margin-left 0.3s ease;
-            padding: 20px;
+            margin-top: -1.8rem;
            
         }
         /* Header Styling */
@@ -514,11 +506,11 @@ onMount(async () => {
         /* Search Bar */
         :global(.search-bar) {
             margin-bottom: 30px;
-            width: 100%;
+            width: 80%;
         }
     
         :global(.search-input) {
-            width: 100%;
+            width: 80%;
             padding: 15px;
             border-radius: 8px;
             border: 1px solid #ccc;
@@ -653,7 +645,7 @@ onMount(async () => {
         }
     
         button:hover {
-            background-color: #45a049;
+            background-color: #d3d3d3;
         }
     
         /* Modal styles */
@@ -680,18 +672,19 @@ onMount(async () => {
     
     .search-and-sort-container {
         display: flex;
-        align-items: center;
+        align-items: left;
         gap: 10px;
         margin-bottom: 20px;
         width: 100%;
         max-width: 1200px;
         margin: auto;
+        padding-right: 1rem;
     }
      /* Wrapper for search input and icon */
      .search-input-wrapper {
         position: relative;
         width: 80%; /* Set the width to 80% */
-        margin-left: 2%; /* Move it slightly from the left */
+        padding-right: 9%; /* Move it slightly from the left */
         flex: none; /* Prevent flex from resizing */
     }
     
@@ -758,8 +751,8 @@ onMount(async () => {
 
 .category-button {
     padding: 10px 20px;
-    background-color: #08B8F3;
-    color: white;
+    background-color: white;
+    color: black;
     border: none;
     border-top-left-radius: 20px;  /* Round top-left corner */
     border-top-right-radius: 20px; /* Round top-right corner */
@@ -770,7 +763,9 @@ onMount(async () => {
 }
 
 .category-button.active {
-    background-color: #4CAF50;
+    color: white;
+ background: linear-gradient(90deg, #08B8F3, #005b80); /* Gradient background */
+    
 }
 
         /* Modal Table Container */

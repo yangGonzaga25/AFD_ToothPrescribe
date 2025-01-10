@@ -378,23 +378,31 @@ async function deleteMedicine(medicine: Medicine) {
 
     /* Button Styles */
     .add-button {
-    background-color: #4a90e2;
-    color: #fff;
-    border: none;
-    padding: 0.3rem;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 1rem;
-    font-weight: 600;
-    margin-bottom: 20px;
-    transition: background-color 0.3s ease;
-    display: block;
-
+      background: linear-gradient(90deg, #08B8F3, #005b80);
+        color: rgb(255, 255, 255);
+        font-family: 'Roboto', sans-serif;
+        font-weight: 550;
+        padding: 0.5rem 1rem;
+        border-radius: 0.3rem;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.582);
+        display: flex;
+        align-items: center;
+        transition: background 0.3s ease, transform 0.2s ease;
+        border: none;
+        cursor: pointer;
+        outline: none;
+        margin-top: -2.2rem;
+        margin-bottom: 1rem;
 }
 
 .add-button:hover {
-    background-color: #357ABD;
-}
+  background: linear-gradient(90deg, #005b80, #08B8F3);
+        transform: translateY(2px);
+      }
+
+
+
+ 
 .grid {
     margin-top: 20px;
     display: grid;
@@ -586,6 +594,12 @@ textarea:focus {
   background-color: #388e3c;
 }
  
+/* In your CSS file */
+.custom-margin-top {
+    margin-top: -1.8rem; /* Adjust the value as needed */
+    margin-left: -1rem;
+    padding-bottom: 1.5rem;
+}
 
 </style>
 
@@ -594,7 +608,7 @@ textarea:focus {
     <Sidebar {isCollapsed} {toggleSidebar} {logout} />
 
     <div class="container">
-        <h1 class="text-2xl font-semibold mb-4">Manage Medicines</h1>
+      <h1 class="text-2xl font-semibold mb-4 custom-margin-top">Manage Medicines</h1>
         <button class="add-button" on:click={togglePopup}>+Add Medicine</button>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
