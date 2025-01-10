@@ -26,6 +26,11 @@
     let sortColumn = '';
     let sortDirection = 'asc'; 
 
+    let showRemarkModal = false; // Controls the visibility of the remark modal
+    let selectedPatient: any = null; // Stores the patient to be archived
+    let remark = ''; // Stores the remark
+
+
     function toggleSidebar() {
         isCollapsed = !isCollapsed;
     }
@@ -94,6 +99,7 @@ async function fetchPatients() {
             age: doc.data().age,
             birthday: doc.data().birthday || '', // Add birthday field, default to empty string if missing
             isArchived: doc.data().isArchived || false,
+            remark: doc.data().remark || 'No remark provided', 
         }));
         filterPatientsByCategory();
     } catch (error) {
@@ -118,53 +124,62 @@ function switchCategory(category: 'Active' | 'Archived') {
     filterAndSortPatients();
 }
 
+function openRemarkModal(patient: any) {
+        selectedPatient = patient;
+        showRemarkModal = true;
+        remark = ''; // Reset the remark input
+    }
 
-async function archivePatient(id: string) {
+// Function to close the modal
+function closeRemarkModal() {
+        showRemarkModal = false;
+    }
+
+    async function archivePatient() {
+    if (!selectedPatient) return;
+
     try {
-        // Show confirmation dialog
-        const result = await Swal.fire({
-            title: "Are you sure?",
-            text: "Do you want to archive this patient?",
-            icon: "warning",
-            showCancelButton: true,
-            confirmButtonColor: "#3085d6",
-            cancelButtonColor: "#d33",
-            confirmButtonText: "Yes, archive it!",
+        // Update the patient with isArchived and remark in Firestore
+        const patientRef = doc(db, "patientProfiles", selectedPatient.id);
+        await updateDoc(patientRef, {
+            isArchived: true,
+            remark: remark, // Save the remark to the database
         });
 
-        if (result.isConfirmed) {
-            // Proceed to archive the patient
-            const patientRef = doc(db, "patientProfiles", id);
-            await updateDoc(patientRef, { isArchived: true });
-
-            // Update local data
-            const patientIndex = patients.findIndex(patient => patient.id === id);
-            if (patientIndex !== -1) {
-                patients[patientIndex].isArchived = true;
-                filterPatientsByCategory();
-            }
-
-            // Show success alert
-            await Swal.fire({
-                title: "Archived!",
-                text: "The patient has been archived.",
-                icon: "success",
-                confirmButtonText: "Okay",
-                confirmButtonColor: "#3085d6",
-            });
+        // Update local data
+        const patientIndex = patients.findIndex(patient => patient.id === selectedPatient.id);
+        if (patientIndex !== -1) {
+            patients[patientIndex].isArchived = true;
+            patients[patientIndex].remark = remark; // Update the remark locally
         }
+
+        // Reapply filters to update the UI
+        filterPatients();
+
+        // Close the modal
+        showRemarkModal = false;
+
+        // Show success message
+        await Swal.fire({
+            title: "Archived!",
+            text: "The patient has been archived with the remark.",
+            icon: "success",
+            confirmButtonText: "Okay",
+            confirmButtonColor: "#3085d6",
+        });
     } catch (error) {
-        // Show error alert
+        console.error("Error archiving patient:", error);
         Swal.fire({
             title: "Error",
             text: "There was an issue archiving the patient. Please try again later.",
             icon: "error",
             confirmButtonColor: "#3085d6",
         });
-
-        console.error("Error archiving patient:", error);
     }
 }
+
+
+   
     
 async function unarchivePatient(id: string) {
     try {
@@ -374,28 +389,36 @@ onMount(async () => {
                 <TableHeadCell>Phone</TableHeadCell>
                 <TableHeadCell>Birth Date</TableHeadCell>
                 <TableHeadCell>Age</TableHeadCell>
+        
+                {#if currentCategory === 'Archived'}
+                    <TableHeadCell>Remark</TableHeadCell>
+                {/if}
                 <TableHeadCell>Actions</TableHeadCell>
-
             </TableHead>
+        
             <TableBody>
                 {#each filteredPatients as patient}
                     <TableBodyRow>
                         <TableBodyCell>{patient.name} {patient.lastName}</TableBodyCell>
                         <TableBodyCell>{patient.address}</TableBodyCell>
                         <TableBodyCell>{patient.phone}</TableBodyCell>
-                        <TableBodyCell>{patient.birthday}</TableBodyCell> 
+                        <TableBodyCell>{patient.birthday}</TableBodyCell>
                         <TableBodyCell>{patient.age}</TableBodyCell>
-                        
+        
+                        {#if currentCategory === 'Archived'}
+                            <TableBodyCell>{patient.remark || 'No remark provided'}</TableBodyCell>
+                        {/if}
+        
                         <TableBodyCell>
                             {#if currentCategory === 'Archived'}
-                            <Button on:click={() => unarchivePatient(patient.id)}>
-                                <img src="./images/unarchive.png" alt="Unarchive" class="action-icon" />
-                            </Button>
-                             {/if}
+                                <Button on:click={() => unarchivePatient(patient.id)}>
+                                    <img src="./images/unarchive.png" alt="Unarchive" class="action-icon" />
+                                </Button>
+                            {/if}
                             {#if currentCategory === 'Active'}
-                            <Button on:click={() => archivePatient(patient.id)}>
-                                <img src="./images/archive.png" alt="Archive" class="action-icon" />
-                            </Button>
+                                <Button on:click={() => openRemarkModal(patient)}>
+                                    <img src="./images/archive.png" alt="Archive" class="action-icon" />
+                                </Button>
                             {/if}
                             <Button on:click={() => openPrescriptionModal(patient)}>
                                 <img src="./images/prescription.png" alt="View Prescriptions" class="action-icon" />
@@ -405,10 +428,48 @@ onMount(async () => {
                 {/each}
             </TableBody>
         </Table>
-        
-        
     </div>
 </div>
+
+{#if showRemarkModal}
+<div class="modal fixed inset-0 bg-gray-500 bg-opacity-50 flex justify-center items-center z-50">
+    <div class="modal-content bg-white p-6 rounded-lg shadow-lg w-11/12 md:w-2/3 lg:w-1/2">
+        <h3 class="text-xl font-semibold mb-4">Archive Patient</h3>
+        <p class="mb-4">Please provide a remark before archiving the patient.</p>
+
+        <form on:submit|preventDefault={archivePatient}>
+            <label for="remark" class="block text-sm font-medium text-gray-700 mb-2">
+                Remark:
+            </label>
+            <textarea
+                id="remark"
+                bind:value={remark}
+                rows="4"
+                class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter your remark here"
+                required
+            ></textarea>
+
+            <div class="flex justify-end mt-4">
+                <button
+                    type="button"
+                    on:click={closeRemarkModal}
+                    class="bg-gray-300 text-gray-700 py-2 px-4 rounded mr-2 hover:bg-gray-400"
+                >
+                    Cancel
+                </button>
+                <button
+                    type="submit"
+                    class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600"
+                >
+                    Submit
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{/if}
+
        <!-- Modal Content -->
 {#if showModal}
 <div class="modal fixed inset-0 bg-gray-500 bg-opacity-50 flex justify-center items-center z-50">
