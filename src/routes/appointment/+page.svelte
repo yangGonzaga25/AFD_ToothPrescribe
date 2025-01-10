@@ -704,37 +704,60 @@ async function acceptReschedule(appointmentId: string) {
       </div>
     </Card>
     <div class="appointment-container1">
-      <div class="appointment-header flex justify-between items-center">
+      <div class="appointment-header flex flex-col justify-between items-center">
         <p class="appointment-title">
           {#if currentSection === 0}
             Pending Appointments
-          {:else}
-            Pending Cancellation Requests
+          {:else if currentSection === 1}
+          Pending Reschedule Requests
+          {:else if currentSection === 2}
+          Pending Cancellation requests
           {/if}
         </p>
-        
-        <div class="navigation-buttons">
-          {#if currentSection === 0}
-            <!-- Right Arrow visible initially (for Pending Appointments) -->
-            <button class="bg-gray-300 p-2 rounded" on:click={goToNextSection}>
-              <AngleRightOutline class="h-5 w-5 text-gray-700" />
-            </button>
-          {:else if currentSection === 1}
-            <!-- Arrows for other sections -->
-            <button class="bg-gray-300 p-2 rounded" on:click={goToPreviousSection}>
-              <AngleLeftOutline class="h-5 w-5 text-gray-700" />
-            </button>
-            <button class="bg-gray-300 p-2 rounded" on:click={goToNextSection}>
-              <AngleRightOutline class="h-5 w-5 text-gray-700" />
-            </button>
-          {:else}
-            <!-- Left Arrow visible for the last section -->
-            <button class="bg-gray-300 p-2 rounded" on:click={goToPreviousSection}>
-              <AngleLeftOutline class="h-5 w-5 text-gray-700" />
-            </button>
-          {/if}
+    
+        <div class="icon-buttons flex space-x-4 mt-4">
+          <!-- Button for Pending Appointments -->
+          <button
+            class="icon-button"
+            on:click={() => (currentSection = 0)}
+            aria-label="Pending Appointments"
+          >
+            <img
+              src="./images/pending-appointment.png"
+              alt="Pending Appointments"
+              class="icon {currentSection === 0 ? 'active' : ''}"
+            />
+          </button>
+    
+          <!-- Button for Pending Cancellation Requests -->
+          <button
+            class="icon-button"
+            on:click={() => (currentSection = 1)}
+            aria-label="Pending Reschedule Requests"
+          >
+            <img
+              src="./images/pending-reschedule.png"
+              alt="Pending Reschedule Requests"
+              class="icon {currentSection === 1 ? 'active' : ''}"
+            />
+          </button>
+    
+          <!-- Button for Pending Reschedule Requests -->
+          <button
+            class="icon-button"
+            on:click={() => (currentSection = 2)}
+            aria-label="Pending Cancellation Requests"
+          >
+            <img
+              src="./images/pending-cancellation.png"
+              alt="Pending Cancellation Requests"
+              class="icon {currentSection === 2 ? 'active' : ''}"
+            />
+          </button>
         </div>
       </div>
+    
+    
       
       {#if currentSection === 0}
       <!-- Pending Appointments Section -->
@@ -1089,6 +1112,32 @@ async function acceptReschedule(appointmentId: string) {
 {/if}
 
 <style>
+/* Icon Buttons Styling */
+.icon-buttons {
+  display: flex;
+  justify-content: space-around;
+  width: 100%;  /* Ensure the icons are evenly spaced */
+}
+
+.icon-buttons img.icon {
+  width: 40px;  /* Adjust the icon size */
+  height: 40px; /* Adjust the icon size */
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+/* Hover effect for icons */
+.icon-buttons img.icon:hover {
+  transform: scale(1.1);  /* Slightly enlarge the icon on hover */
+}
+
+/* Active icon border styling */
+.icon-buttons img.icon.active {
+  border: 4px solid #0288d1;  /* Green border for the active icon */
+  border-radius: 50%;  /* Make the border circular */
+  padding: 2px;  /* Add padding to create space for the border */
+}
+
   /* Position both containers on the right side and adjust width */
   .container1 {
     display: flex;
@@ -1133,10 +1182,18 @@ async function acceptReschedule(appointmentId: string) {
     margin-bottom: 12px;
   }
 
-  .appointment-title {
-    font-size: 1rem;
-    font-weight: bold;
-  }
+ 
+/* Appointment Title Styling */
+.appointment-title {
+  font-size: 15px;
+  font-weight: bold;
+  text-align: center;  /* Center-align the title */
+}
+
+/* Add margin above the icons for spacing */
+.icon-buttons {
+  margin-top: 16px;  /* Adjust spacing between title and icons */
+}
 
   .view-all {
     font-size: 0.75rem;
