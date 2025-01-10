@@ -4,7 +4,6 @@
     import { firebaseConfig } from "$lib/firebaseConfig"; 
     import { initializeApp } from 'firebase/app';
     import { getFirestore, collection, getDocs, query, where } from 'firebase/firestore';
-    import { EditSolid, EyeOutline, TrashBinSolid } from 'flowbite-svelte-icons'; 
     import { Table, TableBody, TableBodyCell, TableBodyRow, TableHead, TableHeadCell } from 'flowbite-svelte';
 
     // Initialize Firebase app and Firestore
@@ -36,55 +35,57 @@
         date: string;
         time: string;
         service: string;
-        status: "pending" | "Declined" | "Missed" | "confirmed" | "Completed" | "cancelled" | "Accepted" | "cancellationRequested" | "";
         cancellationStatus?: 'pending' | 'Approved' | 'Declined' | 'requested' | null;
+        status: "pending" | "Declined" | "Missed" | "confirmed" | "Completed" | "cancelled" | "Accepted" | "cancellationRequested" | "";
     }
 
     let appointments: Appointment[] = [];
 
-    // Fetch the data
-    onMount(async () => {
-        try {
-            currentPage = 1; // Always start on the first page
-            await fetchPatientsWithAppointments();
-        } catch (error) {
-            console.error("Error fetching data:", error);
-        }
-    });
-
     async function fetchPatientsWithAppointments() {
         const appointmentRef = collection(db, "appointments");
-        const q = query(appointmentRef);
-        const appointmentSnapshot = await getDocs(q);
+        const appointmentSnapshot = await getDocs(query(appointmentRef));
 
-        appointments = [];
+        // Extract unique patient IDs from appointments
+        const patientIds = appointmentSnapshot.docs.map(doc => doc.data().patientId);
+        const uniquePatientIds = [...new Set(patientIds)];
 
-        for (const docSnapshot of appointmentSnapshot.docs) {
+        // Fetch patient profiles in bulk using `in` query
+        const patientRef = collection(db, "patientProfiles");
+        const patientBatches = [];
+        const batchSize = 10; // Firestore `in` query limit
+
+        for (let i = 0; i < uniquePatientIds.length; i += batchSize) {
+            const batch = uniquePatientIds.slice(i, i + batchSize);
+            patientBatches.push(query(patientRef, where("id", "in", batch)));
+        }
+
+        const patientSnapshots = await Promise.all(patientBatches.map(batch => getDocs(batch)));
+
+        // Map patient data for quick lookup
+        const patientsMap = new Map();
+        patientSnapshots.forEach(snapshot => {
+            snapshot.forEach(doc => patientsMap.set(doc.id, doc.data()));
+        });
+
+        // Map appointments with patient data
+        appointments = appointmentSnapshot.docs.map(docSnapshot => {
             const appointmentData = docSnapshot.data();
-            const patientRef = collection(db, "patientProfiles");
-            const patientQ = query(patientRef, where("id", "==", appointmentData.patientId));
-            const patientSnapshot = await getDocs(patientQ);
+            const patientData = patientsMap.get(appointmentData.patientId) || {};
 
-            patientSnapshot.forEach(patientDoc => {
-                const patientData = patientDoc.data();
-
-                const patient = {
+            return {
+                appointmentId: docSnapshot.id,
+                ...appointmentData,
+                patientData: {
                     name: patientData.name || '',
                     lastname: patientData.lastName || '',
                     age: patientData.age || 0
-                };
-
-                appointments = [...appointments, {
-                    appointmentId: docSnapshot.id,
-                    ...appointmentData,
-                    patientData: patient,
-                    date: appointmentData.date || '',
-                    time: appointmentData.time || '',
-                    service: appointmentData.service || '',
-                    status: appointmentData.status || 'pending'
-                }];
-            });
-        }
+                },
+                date: appointmentData.date || '',
+                time: appointmentData.time || '',
+                service: appointmentData.service || '',
+                status: appointmentData.status || 'pending'
+            };
+        });
 
         filterAppointments();
     }
@@ -120,7 +121,17 @@
         currentPage = page;
         filterAppointments();
     }
+
+    onMount(async () => {
+        try {
+            currentPage = 1;
+            await fetchPatientsWithAppointments();
+        } catch (error) {
+            console.error("Error fetching data:", error);
+        }
+    });
 </script>
+
 <div class="dashboard">
     <!-- Sidebar -->
     <Sidebar {isCollapsed} {toggleSidebar} {logout} />
@@ -167,7 +178,7 @@
                 >
                     <option value="All">All Status</option>
                     <option value="pending">Pending</option>
-                    <option value="Declined">Declined</option>
+                    <option value="Decline">Declined</option>
                     <option value="Completed">Completed</option>
                     <option value="cancelled">Cancelled</option>
                     <option value="Accepted">Accepted</option>
@@ -209,15 +220,7 @@
                                         <span>{status}</span>
                                     {/if}
                                 </TableBodyCell>
-                               <!-- <TableBodyCell>
-                                    
-                                    <div class="edit-container">
-                                        <EditSolid class="cursor-pointer" title="Edit Appointment" on:click={() => editAppointment(appointmentId)} />
-                                       <span class="edit-text">Edit</span>
-                                    </div>
-                                    
-                                   
-                                </TableBodyCell>-->
+                             
                             </TableBodyRow>
                         {/each}
                     </TableBody>
