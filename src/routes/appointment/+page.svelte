@@ -63,6 +63,10 @@ let pendingAppointmentsList: Appointment[] = [];
 let selectedAppointment: Appointment | null = null;
 let isModalOpen = false;
 
+let showReasonModal = false; // Controls the visibility of the reason modal
+let rejectionReason = ''; // Stores the entered reason
+let pendingAppointmentId = ''; // Stores the ID of the appointment to be updated
+
 let dateVisited: string = '';
 let prescriber: string = '';
 interface Medicine {
@@ -109,6 +113,32 @@ onMount(async () => {
     loading = false;
   }
 });
+
+// Open the reason modal
+const openReasonModal = (appointmentId: string) => {
+  showReasonModal = true;
+  pendingAppointmentId = appointmentId;
+};
+
+// Handle the rejection process with a reason
+const confirmRejection = async () => {
+  if (!rejectionReason.trim()) {
+    // Alert if the reason is empty
+    await Swal.fire({
+      title: 'Error!',
+      text: 'Please provide a reason for rejection.',
+      icon: 'error',
+    });
+    return;
+  }
+
+  // Close the modal
+  showReasonModal = false;
+
+  // Call the existing updatePendingAppointmentStatus function with the reason
+  await updatePendingAppointmentStatus(pendingAppointmentId, 'Decline');
+  rejectionReason = ''; // Clear the reason input
+};
 
 const fetchAppointments = async () => {
   const appointmentsRef = collection(db, 'appointments');
@@ -174,9 +204,8 @@ const fetchPatientProfiles = async () => {
 fetchPatientProfiles();
 const updatePendingAppointmentStatus = async (appointmentId: string, newStatus: string) => {
   try {
-
-     // Confirm action with SweetAlert
-     const result = await Swal.fire({
+    // Confirm action with SweetAlert
+    const result = await Swal.fire({
       title: 'Are you sure?',
       text: `Do you want to update the status to ${newStatus}?`,
       icon: 'warning',
@@ -187,30 +216,36 @@ const updatePendingAppointmentStatus = async (appointmentId: string, newStatus: 
     });
 
     if (!result.isConfirmed) {
-      return; // If the user cancels, stop the function here
+      return; // Stop if the user cancels
     }
 
     // Get a reference to the appointment document in Firestore
     const appointmentRef = doc(db, 'appointments', appointmentId);
 
-    // Update the status field in Firestore
+    // Update the status and reason fields in Firestore
     await updateDoc(appointmentRef, {
       status: newStatus,
       cancellationStatus: newStatus === 'Accepted' ? 'approved' : 'decline',
+      reason: newStatus === 'Decline' ? rejectionReason : null, // Add the rejection reason
     });
 
-    // Optimistically update the local state to reflect the changes immediately
-    appointments = appointments.map(appointment => 
-      appointment.id === appointmentId 
-        ? { ...appointment, status: newStatus, cancellationStatus: newStatus === 'Accepted' ? 'approved' : 'decline' }
+    // Optimistically update the local state
+    appointments = appointments.map(appointment =>
+      appointment.id === appointmentId
+        ? {
+            ...appointment,
+            status: newStatus,
+            cancellationStatus: newStatus === 'Accepted' ? 'approved' : 'decline',
+            reason: newStatus === 'Decline' ? rejectionReason : null, // Update local reason
+          }
         : appointment
     );
 
     // Re-fetch the data to ensure the status update is reflected
     await fetchAppointments();
 
-     // Success alert
-     await Swal.fire({
+    // Success alert
+    await Swal.fire({
       title: 'Success!',
       text: `The status has been updated to ${newStatus}.`,
       icon: 'success',
@@ -226,6 +261,7 @@ const updatePendingAppointmentStatus = async (appointmentId: string, newStatus: 
     });
   }
 };
+
 
 
   const filterAppointments = (view: 'today' | 'week' | 'month') => {
@@ -678,9 +714,12 @@ const goToNextSection = () => {
                 <button class="bg-blue-100 text-blue-500 px-3 py-1 rounded" on:click={() => updatePendingAppointmentStatus(appointment.id, 'Accepted')}>
                   Accept
                 </button>
-                <button class="bg-red-100 text-red-500 px-3 py-1 rounded" on:click={() => updatePendingAppointmentStatus(appointment.id, 'Decline')}>
-                  Reject
-                </button>
+                <button
+            class="bg-red-100 text-red-500 px-3 py-1 rounded"
+            on:click={() => openReasonModal(appointment.id)}
+          >
+            Reject
+          </button>
               </div>
             </div>
             {/if}
@@ -736,6 +775,35 @@ const goToNextSection = () => {
      {/if} 
     </div>
   {/if}
+
+   <!-- Reason Modal -->
+{#if showReasonModal}
+<div class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+  <div class="bg-white rounded-lg p-6 w-1/3 shadow-lg">
+    <h2 class="text-lg font-semibold mb-4">Reason for Rejection</h2>
+    <textarea
+      class="w-full border rounded p-2 mb-4"
+      rows="4"
+      bind:value={rejectionReason}
+      placeholder="Enter the reason for rejection..."
+    ></textarea>
+    <div class="flex justify-end space-x-4">
+      <button
+        class="bg-gray-200 text-gray-800 px-4 py-2 rounded"
+        on:click={() => (showReasonModal = false)}
+      >
+        Cancel
+      </button>
+      <button
+        class="bg-red-500 text-white px-4 py-2 rounded"
+        on:click={confirmRejection}
+      >
+        Submit
+      </button>
+    </div>
+  </div>
+</div>
+{/if}
 
   </div>
   <div class="container">
