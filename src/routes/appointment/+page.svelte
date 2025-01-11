@@ -27,7 +27,7 @@
     status: string;
     patientId: string;
     service: string;
-    
+    [key: string]: any;
   };
 
   interface PatientProfile {
@@ -751,9 +751,9 @@ async function rejectReschedule(appointmentId: string, previousDate: string | un
         // Use onSnapshot to listen for real-time updates
         const appointmentsQuery = query(collection(db, "appointments"));
         onSnapshot(appointmentsQuery, (snapshot) => {
-          const updatedAppointments = [];
+          const updatedAppointments: Appointment[] = [];
           snapshot.forEach((doc) => {
-            const data = { id: doc.id, ...doc.data() };
+            const data = { id: doc.id, ...doc.data() } as Appointment;
             updatedAppointments.push(data);
           });
           // Update local state with real-time data
@@ -774,9 +774,9 @@ async function rejectReschedule(appointmentId: string, previousDate: string | un
       // Use onSnapshot to listen for real-time updates
       const appointmentsQuery = query(collection(db, "appointments"));
       onSnapshot(appointmentsQuery, (snapshot) => {
-        const updatedAppointments = [];
+        const updatedAppointments: Appointment[] = [];
         snapshot.forEach((doc) => {
-          const data = { id: doc.id, ...doc.data() };
+          const data = { id: doc.id, ...doc.data() } as Appointment;
           updatedAppointments.push(data);
         });
         // Update local state with real-time data
@@ -794,7 +794,6 @@ async function rejectReschedule(appointmentId: string, previousDate: string | un
     }
   }
 }
-
 
 
     
