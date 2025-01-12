@@ -16,9 +16,7 @@
   // Define types
   type Appointment = {
     remarks: any;
-
     subServices: any;
-
     cancelReason: any;
     cancellationStatus: any;
     id: string;
@@ -89,7 +87,7 @@ interface PrescriptionMedicine {
 }
 
 let prescriptionMedicines: PrescriptionMedicine[] = []; // Update the type of prescriptionMedicines
-
+let prescriptionAdded = false;
 // Define 'today' as the current date
 const today = new Date();
 
@@ -265,7 +263,9 @@ const updatePendingAppointmentStatus = async (appointmentId: string, newStatus: 
   }
 };
 
-
+onMount(() => {
+    currentView = 'today';
+  });
 
   const filterAppointments = (view: 'today' | 'week' | 'month') => {
   const now = new Date();
@@ -348,8 +348,14 @@ const addSelectedMedicine = async () => {
 
     const qtyRefillsNumber = Number(qtyRefills); // Convert qtyRefills to a number
 
-    if (quantity >= qtyRefillsNumber) { // Use the converted number for comparison
+    if (quantity >= qtyRefillsNumber) { // Ensure sufficient stock
       try {
+        // Decrease the stock in Firestore first
+        const updatedQuantity = quantity - qtyRefillsNumber;
+        await updateDoc(doc(db, "medicines", id), { quantity: updatedQuantity });
+
+        console.log(`Stock updated: ${name} now has ${updatedQuantity} left.`);
+
         // Check if a prescription already exists for this appointment
         const existingPrescriptionQuery = await getDocs(
           query(
@@ -372,12 +378,6 @@ const addSelectedMedicine = async () => {
           console.error("This medicine has already been added to the prescription.");
           return; // Prevent adding if the medicine already exists in the prescription
         }
-
-        // Decrease the stock in Firestore
-        const updatedQuantity = quantity - qtyRefillsNumber;
-        await updateDoc(doc(db, "medicines", id), { quantity: updatedQuantity });
-
-        console.log(`Stock updated: ${name} now has ${updatedQuantity} left.`);
 
         // Add the medicine to the prescription
         prescriptionMedicines.push({
@@ -433,83 +433,87 @@ const addManualMedicine = () => {
 
 // Submit prescription
 const submitPrescription = async () => {
-  try {
-    if (selectedAppointment) {
-      const db = getFirestore();
-      
-      // Check if a prescription already exists for this appointment
-      const existingPrescriptionQuery = await getDocs(
-        query(
-          collection(db, "prescriptions"),
-          where("appointmentId", "==", selectedAppointment.id)
-        )
-      );
+    try {
+      if (selectedAppointment) {
+        const db = getFirestore();
 
-      if (!existingPrescriptionQuery.empty) {
+        // Check if a prescription already exists for this appointment
+        const existingPrescriptionQuery = await getDocs(
+          query(
+            collection(db, "prescriptions"),
+            where("appointmentId", "==", selectedAppointment.id)
+          )
+        );
+
+        if (!existingPrescriptionQuery.empty) {
+          // Show a Swal alert and stop if a prescription already exists
+          await Swal.fire({
+            title: 'Duplicate Prescription',
+            text: 'A prescription already exists for this appointment.',
+            icon: 'warning',
+            confirmButtonText: 'OK',
+          });
+          console.error("A prescription already exists for this appointment.");
+          return; // Stop execution if a prescription already exists
+        }
+
+        // Create the new prescription document
+        const prescription = {
+          appointmentId: selectedAppointment.id,
+          medicines: prescriptionMedicines,
+          prescriber,
+          createdAt: new Date().toISOString(),
+        };
+
+        await addDoc(collection(db, "prescriptions"), prescription);
+
+        console.log("Prescription successfully saved to Firestore.");
+
+        // Mark prescription as added
+        prescriptionAdded = true; // Disable the button
+
+        // Clear prescription data
+        prescriptionMedicines = [];
+        prescriber = '';
+        isModalOpen = false;
+
+        // Show success alert
         await Swal.fire({
-          title: 'Duplicate Prescription',
-          text: 'A prescription already exists for this appointment.',
-          icon: 'warning',
+          title: 'Success!',
+          text: 'Prescription successfully saved to Firestore.',
+          icon: 'success',
+        });
+      } else {
+        await Swal.fire({
+          title: 'No Appointment Selected',
+          text: 'Please select an appointment to submit a prescription.',
+          icon: 'error',
           confirmButtonText: 'OK',
         });
-        console.error("A prescription already exists for this appointment.");
-        return; // Stop execution if a prescription already exists
+        console.error("No selected appointment found.");
       }
-    
-      // Create the new prescription document
-      const prescription = {
-        appointmentId: selectedAppointment.id,
-        medicines: prescriptionMedicines,
-        prescriber,
-        createdAt: new Date().toISOString(),
-      };
-
-      await addDoc(collection(db, "prescriptions"), prescription);
-
-      console.log("Prescription successfully saved to Firestore.");
-
-      // Clear prescription data
-      prescriptionMedicines = [];
-      prescriber = '';
-      isModalOpen = false;
-
-      
-       // Show success alert
-       await Swal.fire({
-        title: 'Success!',
-        text: 'Prescription successfully saved to Firestore.',
-        icon: 'success',
-      });
-    } else {
-      await Swal.fire({
-        title: 'No Appointment Selected',
-        text: 'Please select an appointment to submit a prescription.',
-        icon: 'error',
-        confirmButtonText: 'OK',
-      });
-      console.error("No selected appointment found.");
+    } catch (error) {
+      if (error instanceof Error) {
+        console.error("Error saving prescription to Firestore:", error.message);
+        // Show error alert
+        await Swal.fire({
+          title: 'Error!',
+          text: `Error saving prescription: ${error.message}`,
+          icon: 'error',
+        });
+      } else {
+        console.error("Error saving prescription to Firestore:", error);
+        // Show fallback error alert
+        await Swal.fire({
+          title: 'Error!',
+          text: 'An unknown error occurred while saving the prescription.',
+          icon: 'error',
+        });
+      }
     }
-  } catch (error) {
-    if (error instanceof Error) {
-      console.error("Error saving prescription to Firestore:", error.message);
-      // Show error alert
-      await Swal.fire({
-        title: 'Error!',
-        text: `Error saving prescription: ${error.message}`,
-        icon: 'error',
-      });
-    } else {
-      console.error("Error saving prescription to Firestore:", error); // Fallback for unknown error types
-      
-      // Show fallback error alert
-      await Swal.fire({
-        title: 'Error!',
-        text: 'An unknown error occurred while saving the prescription.',
-        icon: 'error',
-      });
-    }
-  }
-};
+  };
+
+
 
 
 const closeModal = () => {
@@ -739,7 +743,7 @@ async function rejectReschedule(appointmentId: string, previousDate: string | un
         appointmentsRef,
         where("date", "==", previousDate),
         where("time", "==", previousTime),
-        where("status", "in", ["Accepted", "Pending"]) // Adjust status values to match Firestore data
+        where("status", "in", ["Accepted", "pending"]) // Adjust status values to match Firestore data
       );
       const conflictSnapshot = await getDocs(conflictQuery);
 
@@ -795,8 +799,6 @@ async function rejectReschedule(appointmentId: string, previousDate: string | un
   }
 }
 
-
-    
 </script>
 
 <Sidebar {isCollapsed} {toggleSidebar} {logout} />
@@ -1122,9 +1124,13 @@ async function rejectReschedule(appointmentId: string, previousDate: string | un
     </div>
      
     <div class="appointment-buttons">
-      <button on:click={() => openModal(appointment.id)} class="bg-green-100">
-        Add Prescription
-      </button>
+      <button
+      on:click={() => openModal(appointment.id)}
+      class="bg-green-100"
+      disabled={prescriptionAdded}  
+    >
+      Add Prescription
+    </button>
       <button
         class="bg-blue-100"
         on:click={() => handleCompletedAppointment(appointment.id, 'Completed', appointment.remarks || '')}
@@ -1149,58 +1155,60 @@ async function rejectReschedule(appointmentId: string, previousDate: string | un
     </div>
   </div>
   
- <!-- Modal with Overlay (Appears when isModalOpen is true) -->
- {#if isModalOpen}
- <!-- svelte-ignore a11y_click_events_have_key_events -->
- <!-- svelte-ignore a11y_no_static_element_interactions -->
- <div class="modal-overlay" on:click={closeModal} role="dialog" aria-labelledby="modal-title" aria-hidden={!isModalOpen}>
-   <div class="modal-content" on:click|stopPropagation tabindex="-1">
-     <button class="absolute top-2 right-2 text-white text-xl" on:click={closeModal} aria-label="Close Modal"></button>
-     <h2 id="modal-title" class="text-lg font-bold mb-4">
-       Add Prescription for 
-       {selectedAppointment 
-         ? (() => {
-             const patientProfile = patientProfiles.find(profile => profile.id === selectedAppointment?.patientId);
-             return patientProfile ? `${patientProfile.name} ${patientProfile.lastName}` : 'Patient';
-           })() 
-         : 'Patient'}
-     </h2>
+<!-- Modal with Overlay (Appears when isModalOpen is true) -->
+{#if isModalOpen}
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div class="modal-overlay" on:click={closeModal} role="dialog" aria-labelledby="modal-title" aria-hidden={!isModalOpen}>
+    <div class="modal-content" on:click|stopPropagation tabindex="-1">
+      <button class="absolute top-2 right-2 text-white text-xl" on:click={closeModal} aria-label="Close Modal"></button>
+      <h2 id="modal-title" class="text-lg font-bold mb-4">
+        Add Prescription for 
+        {selectedAppointment 
+          ? (() => {
+              const patientProfile = patientProfiles.find(profile => profile.id === selectedAppointment?.patientId);
+              return patientProfile ? `${patientProfile.name} ${patientProfile.lastName}` : 'Patient';
+            })() 
+          : 'Patient'}
+      </h2>
 
-     <div class="space-y-8">
-      <!-- Left Side (Prescription Form) -->
-      <form on:submit|preventDefault={submitPrescription} class="w-full space-y-4">
-        <div class="mb-4">
-          <label for="dateVisited" class="block text-sm font-medium mb-1">Date Visited</label>
-          <input id="dateVisited" type="date" bind:value={dateVisited} required class="border rounded p-2 w-full focus:ring-2 focus:ring-green-500" />
-        </div>
-    
-        <div class="mb-4">
-          <label for="availableMedicine" class="block text-sm font-medium mb-1">Available Medicines</label>
-          <select id="availableMedicine" bind:value={selectedMedicine} class="border rounded p-2 w-full focus:ring-2 focus:ring-green-500">
-            <option value="" disabled>Select a medicine</option>
-            {#each availableMedicines as med}
-              <option value={med}>
-                {med.name} (Stock: {med.quantity})
-              </option>
-            {/each}
-          </select>
-        </div>
-        <div class="mb-4">
-          <label for="manualMedication" class="block text-sm font-medium mb-1">Medication</label>
-          <input id="manualMedication" type="text" bind:value={medication} class="border rounded p-2 w-full focus:ring-2 focus:ring-green-500" />
-        </div>
+      <div class="space-y-8">
+        <!-- Left Side (Prescription Form) -->
+        <form on:submit|preventDefault={submitPrescription} class="w-full space-y-4">
+          <div class="mb-4">
+            <label for="dateVisited" class="block text-sm font-medium mb-1">Date Visited</label>
+            <input id="dateVisited" type="date" bind:value={dateVisited} required class="border rounded p-2 w-full focus:ring-2 focus:ring-green-500" />
+          </div>
+
+          <div class="mb-4">
+            <label for="availableMedicine" class="block text-sm font-medium mb-1">Available Medicines</label>
+            <select id="availableMedicine" bind:value={selectedMedicine} class="border rounded p-2 w-full focus:ring-2 focus:ring-green-500">
+              <option value="" disabled>Select a medicine</option>
+              {#each availableMedicines as med}
+                <option value={med}>
+                  {med.name} (Stock: {med.quantity})
+                </option>
+              {/each}
+            </select>
+          </div>
+
+          <div class="mb-4">
+            <label for="manualMedication" class="block text-sm font-medium mb-1">Medication</label>
+            <input id="manualMedication" type="text" bind:value={medication} class="border rounded p-2 w-full focus:ring-2 focus:ring-green-500" />
+          </div>
+
+          <div class="mb-4">
+            <label for="qtyRefills" class="block text-sm font-medium mb-1">Qty/Refills</label>
+            <input id="qtyRefills" type="number" bind:value={qtyRefills} class="border rounded p-2 w-full focus:ring-2 focus:ring-green-500" />
+          </div>
+
+          <div class="mb-4">
+            <label for="instructions" class="block text-sm font-medium mb-1">Instructions</label>
+            <textarea id="instructions" bind:value={instructions} class="border rounded p-2 w-full focus:ring-2 focus:ring-green-500"></textarea>
+          </div>
+        </form>
 
         <div class="mb-4">
-          <label for="qtyRefills" class="block text-sm font-medium mb-1">Qty/Refills</label>
-          <input id="qtyRefills" type="number" bind:value={qtyRefills} class="border rounded p-2 w-full focus:ring-2 focus:ring-green-500" />
-        </div>
-    
-        <div class="mb-4">
-          <label for="instructions" class="block text-sm font-medium mb-1">Instructions</label>
-          <textarea id="instructions" bind:value={instructions} class="border rounded p-2 w-full focus:ring-2 focus:ring-green-500"></textarea>
-        </div>
-      </form>
-     <div class="mb-4">
           <label for="prescriber" class="block text-sm font-medium mb-1">Prescriber</label>
           <select
             id="prescriber"
@@ -1212,29 +1220,28 @@ async function rejectReschedule(appointmentId: string, previousDate: string | un
           </select>
         </div>
       </div>
- 
-    <!-- Submit Prescription -->
-    <div class="flex justify-end mt-6">
-      <button
-        type="button"
-        class="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500"
-        on:click={() => {
-          // Add both selected and manual medicines before submitting
-          addSelectedMedicine();
-          addManualMedicine();
-    
-          // Submit the prescription after adding medicines
-          submitPrescription();
-        }}
-      >
-        Submit Prescription
-      </button>
+
+      <!-- Submit Prescription -->
+      <div class="flex justify-end mt-6">
+        <button
+          type="button"
+          class="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500"
+          on:click={() => {
+            // Add both selected and manual medicines before submitting
+            addSelectedMedicine();
+            addManualMedicine();
+
+            // Submit the prescription after adding medicines
+            submitPrescription();
+          }}
+        >
+          Submit Prescription
+        </button>
+      </div>
     </div>
-    
-   </div>
   </div>
-    
 {/if}
+
 
 <style>
 /* Icon Buttons Styling */
