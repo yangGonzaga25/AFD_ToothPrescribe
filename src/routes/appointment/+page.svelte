@@ -1126,7 +1126,7 @@ async function rejectReschedule(appointmentId: string, previousDate: string | un
     <div class="appointment-buttons">
       <button
       on:click={() => openModal(appointment.id)}
-      class="bg-green-100"
+      class="bg-green-100 text-green-500 px-3 py-1 rounded"
       disabled={prescriptionAdded}  
     >
       Add Prescription
