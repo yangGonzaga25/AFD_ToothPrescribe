@@ -1100,28 +1100,42 @@ async function rejectReschedule(appointmentId: string, previousDate: string | un
         </button>
       </div>
   
- {#if filterAppointments(currentView).length > 0}
-  {#each filterAppointments(currentView) as appointment}
-    <div class="appointment-card">
-      <div class="appointment-details">
-        <p><strong>{appointment.date} at {appointment.time}</strong></p>
-        {#each patientProfiles as profile (profile.id)}
-          {#if profile.id === appointment.patientId}
-            <p>{profile.name} {profile.lastName} ({profile.age} years old)</p>
-          {/if}
-        {/each}
-        <p>Service: {appointment.service}</p>
+      {#if filterAppointments(currentView).length > 0}
+      {#each filterAppointments(currentView) as appointment}
+        <article class="appointment-card">
+          <section class="appointment-details">
+             <!-- Date & Time Section -->
+             <div style="margin-bottom: 10px;">
+              <p style="margin: 5px 0 0; font-size: 0.95em; color: #555;">
+                <strong>{new Date(appointment.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</strong>
+                <span> | {appointment.time}</span>
+              </p>
+            </div>
 
-       <div>
-        <label for="remarks-{appointment.id}">Remarks:</label>
-        <input
-          type="text"
-          id="remarks-{appointment.id}"
-          bind:value={appointment.remarks}
-          placeholder="Enter remarks here"
-        />
-      </div>
-    </div>
+            <p class="appointment-patient">
+              {#each patientProfiles as profile (profile.id)}
+                {#if profile.id === appointment.patientId}
+                  {profile.name} {profile.lastName} ({profile.age} years old)
+                {/if}
+              {/each}
+            </p>
+            <p class="appointment-service">Service: {appointment.service}</p>
+            <div class="remarks-container">
+              <label for="remarks-{appointment.id}" class="remarks-label">
+                Remarks:
+              </label>
+              <input
+                type="text"
+                id="remarks-{appointment.id}"
+                class="remarks-input"
+                bind:value={appointment.remarks}
+                placeholder="Enter remarks here"
+                aria-label="Enter remarks for {appointment.date} at {appointment.time}"
+              />
+            </div>
+            
+          </section>
+        </article>
      
     <div class="appointment-buttons">
       <button
@@ -1144,7 +1158,7 @@ async function rejectReschedule(appointmentId: string, previousDate: string | un
         Missed
       </button>
     </div>
-  </div>
+ 
 {/each}
 {:else}
 <div class="no-appointments">
@@ -1335,86 +1349,114 @@ async function rejectReschedule(appointmentId: string, previousDate: string | un
   }
 
   .appointment-card {
-    margin-bottom: 10px;
-    padding: 10px;
-    font-size: 0.875rem;
-    border-radius: 8px;
-    background-color: transparent;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    
-  }
+  margin-bottom: 12px; /* Slightly increased spacing for better separation */
+  padding: 12px 16px; /* Increased padding for more balanced layout */
+  font-size: 0.9rem;
+  border-radius: 8px;
+  background-color: #fff;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(49, 130, 206, 0.5); /* Consistent border */
+  min-height: 100px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
 
-  .patient-info {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
+.appointment-card:hover {
+  transform: translateY(-2px); /* Subtle hover effect */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
 
-  .patient-name {
-    font-size: 1rem;
-    font-weight: bold;
-  }
+.patient-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
 
- 
+.patient-name {
+  font-size: 1rem;
+  font-weight: bold;
+  color: #333;
+}
 
-  .service {
-    margin-top: 4px;
-  }
+.service {
+  margin-top: 6px;
+  color: #555;
+  font-size: 0.875rem;
+}
 
-  .appointment-buttons {
-    margin-top: 8px;
-    display: flex;
-    justify-content: space-between;
-  }
+.appointment-buttons {
+  display: flex;
+  gap: 12px; /* Increased gap for better separation */
+  justify-content: flex-end;
+  margin-top: 10px;
+}
 
-  .container {
+.appointment-buttons button {
+  padding: 8px 16px;
+  border-radius: 50px;
+  cursor: pointer;
+  border: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.appointment-buttons button:hover {
+  background-color: #3182ce;
+  color: #fff;
+}
+
+.container {
   position: fixed;
-  top: 0; /* Positions the container at the top */
+  top: 0;
   left: 230px;
-  height: 700px; /* Fixed height */
-  width: 57%; /* Adjust width as needed */
-  overflow-y: scroll; /* Enables vertical scrolling */
-  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.1), 0 2px 4px #0288d1;
-  /* Adjusted shadow to match the top placement */
-
-  scrollbar-width: none; /* For Firefox */
+  height: 700px;
+  width: 57%;
+  overflow-y: scroll;
+  box-shadow: 0 4px 4px rgba(0, 0, 0, 0.1), 0 2px 4px #0288d1;
+  scrollbar-width: thin; /* Visible but minimal scrollbar for Firefox */
+  scrollbar-color: #aaa #f9fafb;
 }
 
 .container::-webkit-scrollbar {
-  display: none; /* For Chrome, Safari, and Edge */
+  width: 8px;
 }
 
+.container::-webkit-scrollbar-thumb {
+  background-color: #aaa; /* Custom thumb color */
+  border-radius: 4px;
+}
 
-  .appointments-section {
-    padding: 20px;
-    background-color: #f9fafb;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    margin-bottom: 20px;
-    
+.container::-webkit-scrollbar-track {
+  background-color: #f9fafb;
+}
+
+.appointments-section {
+  padding: 20px;
+  background-color: #f9fafb;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+@media (max-width: 768px) {
+  .container {
+    left: 0;
+    width: 100%;
+    height: auto;
+    top: 0;
+    padding: 10px;
   }
 
   .appointment-card {
-    background-color: #fff;
-    padding: 15px;
-    margin-bottom: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-    min-height: 100px;
-    box-shadow: -4px 0 0 #3182ce;
-    border: 1px solid rgba(49, 130, 206, 0.5); /* 50% transparent */
-
+    padding: 10px;
   }
 
-  .appointment-details {
-    margin-bottom: 10px;
+  .appointment-buttons button {
+    padding: 6px 12px;
+    font-size: 0.8rem;
   }
-
-  .appointment-buttons {
-    display: flex;
-    gap: 10px;
-    justify-content: flex-end;
-  }
+}
 
   .appointment-buttons button {
     padding: 8px 16px;
@@ -1423,6 +1465,7 @@ async function rejectReschedule(appointmentId: string, previousDate: string | un
     border: none;
     font-size: 0.9rem;
     font-weight: 600;
+    margin-bottom: 10px;
   }
   /* Style for the active tab */
   .appointments-section .tab-item {
@@ -1582,5 +1625,49 @@ async function rejectReschedule(appointmentId: string, previousDate: string | un
       font-size: 0.75rem;
     }
   }
+.appointment-card {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+  background-color: #f9f9f9;
+}
+
+.appointment-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+
+.appointment-patient {
+  font-size: 1em;
+  color: #555;
+}
+
+.appointment-service {
+  font-size: 1em;
+  color: #666;
+}
+
+.remarks-container {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.remarks-input {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 1em;
+  width: 100%;
+}
+
+.remarks-input:focus {
+  border-color: #007bff;
+  outline: none;
+  box-shadow: 0 0 4px rgba(0, 123, 255, 0.5);
+}
 
 </style>
