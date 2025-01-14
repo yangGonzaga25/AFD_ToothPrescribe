@@ -226,7 +226,7 @@ const updatePendingAppointmentStatus = async (appointmentId: string, newStatus: 
     // Update the status and reason fields in Firestore
     await updateDoc(appointmentRef, {
       status: newStatus,
-      cancellationStatus: newStatus === 'Accepted' ? 'approved' : 'decline',
+      cancellationStatus: newStatus === 'Accepted' ? '' : 'decline', // Make empty when Accepted
       reason: newStatus === 'Decline' ? rejectionReason : null, // Add the rejection reason
     });
 
@@ -236,11 +236,13 @@ const updatePendingAppointmentStatus = async (appointmentId: string, newStatus: 
         ? {
             ...appointment,
             status: newStatus,
-            cancellationStatus: newStatus === 'Accepted' ? 'approved' : 'decline',
+            cancellationStatus: newStatus === 'Accepted' ? '' : 'decline', // Make empty when Accepted
             reason: newStatus === 'Decline' ? rejectionReason : null, // Update local reason
           }
         : appointment
     );
+
+
 
     // Re-fetch the data to ensure the status update is reflected
     await fetchAppointments();
@@ -263,15 +265,15 @@ const updatePendingAppointmentStatus = async (appointmentId: string, newStatus: 
   }
 };
 
-onMount(() => {
-    currentView = 'today';
-  });
+onMount(() => { 
+  currentView = 'today';
+});
 
-  const filterAppointments = (view: 'today' | 'week' | 'month') => {
+const filterAppointments = (view: 'today' | 'week' | 'month') => {
   const now = new Date();
   return appointments.filter(appt => {
     const apptDate = new Date(appt.date);
-    if (appt.status !== 'Accepted') return false; // Only include accepted appointments
+    if (appt.status !== 'Accepted' && appt.status !== 'Rescheduled') return false; // Include accepted or rescheduled appointments
     if (view === 'today') {
       return apptDate.toDateString() === now.toDateString();
     } else if (view === 'week') {
@@ -688,7 +690,7 @@ async function acceptReschedule(appointmentId: string) {
         appointmentsRef,
         where("date", "==", appointment.date),
         where("time", "==", appointment.time),
-        where("status", "in", ["Accepted", "Pending"])
+        where("status", "in", ["Accepted", "Pending", "accepted", "pending"])
       );
       const conflictSnapshot = await getDocs(conflictQuery);
 
@@ -717,7 +719,6 @@ async function acceptReschedule(appointmentId: string) {
   }
 }
 
-
 async function rejectReschedule(appointmentId: string, previousDate: string | undefined, previousTime: string | undefined) {
   // Validate required parameters
   if (!previousDate || !previousTime) {
@@ -743,7 +744,7 @@ async function rejectReschedule(appointmentId: string, previousDate: string | un
         appointmentsRef,
         where("date", "==", previousDate),
         where("time", "==", previousTime),
-        where("status", "in", ["Accepted", "pending"]) // Adjust status values to match Firestore data
+        where("status", "in", ["Accepted", "Pending", "accepted", "pending"]) // Check both "pending" and "accepted"
       );
       const conflictSnapshot = await getDocs(conflictQuery);
 
@@ -798,6 +799,7 @@ async function rejectReschedule(appointmentId: string, previousDate: string | un
     }
   }
 }
+
 
 </script>
 
