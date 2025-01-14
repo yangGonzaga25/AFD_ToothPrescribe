@@ -57,6 +57,14 @@ let prescriptions: any[] = [];
 let monthlyAppointments: any[] = [];
 let openTable: 'patients' | 'appointments' | 'prescriptions' | 'monthlyAppointments' | null = null;
 let exportType = "excel";
+let dailyAppointments = [
+    { day: "Monday", count: 0 },
+    { day: "Tuesday", count: 0 },
+    { day: "Wednesday", count: 0 },
+    { day: "Thursday", count: 0 },
+    { day: "Friday", count: 0 },
+    { day: "Sunday", count: 0 }
+];
 
 
 interface PrescriptionData {
@@ -455,72 +463,72 @@ async function fetchGraphData() {
     }
 }
 
-function createCharts() {
-    // Sort dateLabels in ascending order based on date
-    const sortedDates = dateLabels.sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+// function createCharts() {
+//     // Sort dateLabels in ascending order based on date
+//     const sortedDates = dateLabels.sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
 
-    // Bar Chart for New Appointments
-    new Chart(document.getElementById('barChart') as HTMLCanvasElement, {
-        type: 'bar', // Specify the chart type
-        data: {
-            labels: sortedDates, // Use sorted date as labels
-            datasets: [{
-                label: 'New Appointments',
-                data: newAppointmentsPerDay,
-                backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                borderColor: 'rgba(75, 192, 192, 1)',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        // Ensure that only whole numbers are shown
-                        stepSize: 1,
-                        callback: function(value) {
-                            if (Number.isInteger(value)) {
-                                return value; // Only return whole numbers
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    });
+//     // Bar Chart for New Appointments
+//     new Chart(document.getElementById('barChart') as HTMLCanvasElement, {
+//         type: 'bar', // Specify the chart type
+//         data: {
+//             labels: sortedDates, // Use sorted date as labels
+//             datasets: [{
+//                 label: 'New Appointments',
+//                 data: newAppointmentsPerDay,
+//                 backgroundColor: 'rgba(75, 192, 192, 0.2)',
+//                 borderColor: 'rgba(75, 192, 192, 1)',
+//                 borderWidth: 1
+//             }]
+//         },
+//         options: {
+//             scales: {
+//                 y: {
+//                     beginAtZero: true,
+//                     ticks: {
+//                         // Ensure that only whole numbers are shown
+//                         stepSize: 1,
+//                         callback: function(value) {
+//                             if (Number.isInteger(value)) {
+//                                 return value; // Only return whole numbers
+//                             }
+//                         }
+//                     }
+//                 }
+//             }
+//         }
+//     });
 
-        // Line Chart for Patients
-        new Chart(document.getElementById('lineChart') as HTMLCanvasElement, {
-        type: 'line', // Specify the chart type
-        data: {
-            labels: sortedDates, // Use the sorted date labels
-            datasets: [{
-                label: 'Total Patients',
-                data: totalPatientsPerDay,
-                backgroundColor: 'rgba(153, 102, 255, 0.2)',
-                borderColor: 'rgba(153, 102, 255, 1)',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        // Ensure that only whole numbers are shown
-                        stepSize: 1,
-                        callback: function(value) {
-                            if (Number.isInteger(value)) {
-                                return value; // Only return whole numbers
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    });
-}
+//         // Line Chart for Patients
+//         new Chart(document.getElementById('lineChart') as HTMLCanvasElement, {
+//         type: 'line', // Specify the chart type
+//         data: {
+//             labels: sortedDates, // Use the sorted date labels
+//             datasets: [{
+//                 label: 'Total Patients',
+//                 data: totalPatientsPerDay,
+//                 backgroundColor: 'rgba(153, 102, 255, 0.2)',
+//                 borderColor: 'rgba(153, 102, 255, 1)',
+//                 borderWidth: 1
+//             }]
+//         },
+//         options: {
+//             scales: {
+//                 y: {
+//                     beginAtZero: true,
+//                     ticks: {
+//                         // Ensure that only whole numbers are shown
+//                         stepSize: 1,
+//                         callback: function(value) {
+//                             if (Number.isInteger(value)) {
+//                                 return value; // Only return whole numbers
+//                             }
+//                         }
+//                     }
+//                 }
+//             }
+//         }
+//     });
+// }
 
 
     function toggleAppointments() {
@@ -700,8 +708,341 @@ async function fetchPrescriptionsData() {
     }
 }
 
+// Declare variables to store the chart instances
+let appointmentStatusChart: Chart | null = null;
+let genderDistributionChart: Chart | null = null;
+
+// Function to create the pie chart for appointment status
+async function createAppointmentStatusPieChart() {
+    try {
+        // Fetch appointments from Firestore
+        const appointmentDocs = await getDocs(collection(db, "appointments"));
+
+        // Initialize counts for each relevant status
+        const statusCounts = { completed: 0, pending: 0, missed: 0 };
+
+        // Iterate through the fetched appointments and categorize based on status
+        appointmentDocs.forEach((doc) => {
+            const status = (doc.data().status || "").toLowerCase(); // Ensure status is in lowercase
+
+            // Only categorize if the status is 'completed', 'pending', or 'missed'
+            if (status === "completed") {
+                statusCounts.completed++;
+            } else if (status === "pending") {
+                statusCounts.pending++;
+            } else if (status === "missed") {
+                statusCounts.missed++;
+            }
+        });
+
+        // Prepare data for the pie chart
+        const pieData = {
+            labels: ["Completed", "Pending", "Missed"],
+            datasets: [
+                {
+                    data: [statusCounts.completed, statusCounts.pending, statusCounts.missed],
+                    backgroundColor: ["#4caf50", "#ff9800", "#f44336"], // Set colors for each category
+                },
+            ],
+        };
+
+        // Get the canvas element and cast it to HTMLCanvasElement
+        const pieChartCanvas = document.getElementById("appointmentStatusPieChart") as HTMLCanvasElement;
+
+        // Destroy the previous chart if it exists
+        if (appointmentStatusChart) {
+            appointmentStatusChart.destroy();
+        }
+
+        // Create the pie chart using Chart.js
+        appointmentStatusChart = new Chart(pieChartCanvas, {
+            type: "pie",
+            data: pieData,
+            options: {
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: "bottom",
+                    },
+                },
+            },
+        });
+
+        console.log("Pie chart created successfully!");
+    } catch (error) {
+        console.error("Error creating appointment status pie chart:", error);
+    }
+}
+
+// Sample function to create a gender distribution doughnut chart
+async function createGenderDistributionChart() {
+    try {
+        const patientCollection = collection(db, "patientProfiles");
+        const patientDocs = await getDocs(patientCollection);
+
+        let maleCount = 0;
+        let femaleCount = 0;
+
+        // Count male and female patients
+        patientDocs.forEach((doc) => {
+            const gender = doc.data().gender.toLowerCase();
+            if (gender === "male") {
+                maleCount++;
+            } else if (gender === "female") {
+                femaleCount++;
+            }
+        });
+
+        // Prepare data for the doughnut chart
+        const genderData = {
+            labels: ["Male", "Female"],
+            datasets: [
+                {
+                    data: [maleCount, femaleCount],
+                    backgroundColor: ["#4caf50", "#ff9800"], // Custom colors for each gender
+                },
+            ],
+        };
+
+        // Get the canvas element
+        const doughnutChartCanvas = document.getElementById("genderDistributionDoughnutChart") as HTMLCanvasElement;
+
+        // Destroy the previous chart if it exists
+        if (genderDistributionChart) {
+            genderDistributionChart.destroy();
+        }
+
+        // Create the doughnut chart
+        genderDistributionChart = new Chart(doughnutChartCanvas, {
+            type: "doughnut", // Set the type to 'doughnut'
+            data: genderData,
+            options: {
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: "bottom",
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(tooltipItem) {
+                                // Formatting tooltip label
+                                return `${tooltipItem.label}: ${tooltipItem.raw} Patients`;
+                            },
+                        },
+                    },
+                },
+                cutout: '70%', // Use cutout instead of cutoutPercentage
+            },
+        });
+
+        console.log("Doughnut chart created successfully!");
+    } catch (error) {
+        console.error("Error creating gender distribution doughnut chart:", error);
+    }
+}
+
+// Function to fetch appointments and count by day (Monday to Friday)
+async function fetchWeeklyAppointments() {
+    try {
+        const appointmentDocs = await getDocs(collection(db, "appointments"));
+        
+        const currentDate = new Date();
+        const startOfWeek = new Date(currentDate.setDate(currentDate.getDate() - currentDate.getDay() + 1)); // Monday
+        const endOfWeek = new Date(currentDate.setDate(currentDate.getDate() - currentDate.getDay() + 7)); // Sunday
+
+        // Reset daily counts before recalculating
+        const dailyAppointments = [
+            { day: "Monday", count: 0 },
+            { day: "Tuesday", count: 0 },
+            { day: "Wednesday", count: 0 },
+            { day: "Thursday", count: 0 },
+            { day: "Friday", count: 0 }
+        ];
+
+        // Iterate through the appointments and count the appointments for each day (excluding Saturday)
+        appointmentDocs.forEach((doc) => {
+            const appointmentData = doc.data();
+            const appointmentDate = new Date(appointmentData.date); // Convert string to Date object
+
+            // Only consider appointments within this week
+            if (appointmentDate >= startOfWeek && appointmentDate <= endOfWeek) {
+                const dayOfWeek = appointmentDate.getDay(); // Get the day of the week (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
+                
+                if (dayOfWeek >= 1 && dayOfWeek <= 5) { // Monday to Friday (exclude Saturday)
+                    // Increment the count for the corresponding day
+                    dailyAppointments[dayOfWeek - 1].count = parseInt(dailyAppointments[dayOfWeek - 1].count.toString(), 10) + 1;
+                }
+            }
+        });
+
+        // Ensure counts are integers (No decimals)
+        const days = dailyAppointments.map(item => item.day);
+        const counts = dailyAppointments.map(item => item.count); // Now it's already an integer
+
+        // Get the canvas element and assert its type as HTMLCanvasElement
+        const barChartCanvas = document.getElementById("weeklyAppointmentsBarChart") as HTMLCanvasElement | null;
+        if (barChartCanvas) {
+            // Create the bar chart
+            new Chart(barChartCanvas, {
+                type: "bar",
+                data: {
+                    labels: days,
+                    datasets: [{
+                        label: "Appointments",
+                        data: counts,
+                        backgroundColor: "#4caf50", // Green color for bars
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: "Number of Appointments"
+                            },
+                            ticks: {
+                                // Ensure only whole numbers (integers) are displayed
+                                stepSize: 1,
+                                callback: function(value) {
+                                    if (Number.isInteger(value)) {
+                                        return value; // Only return whole numbers
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        console.log("Weekly appointments bar chart created!");
+
+    } catch (error) {
+        console.error("Error fetching weekly appointments:", error);
+    }
+}
+
+// Call the function to render the bar chart
+fetchWeeklyAppointments();
+
+
+
+async function createCompletedMissedLineChart() {
+    try {
+        // Fetch all appointments from Firestore
+        const appointmentDocs = await getDocs(collection(db, "appointments"));
+
+        // Initialize counts for completed and missed appointments for each month (Jan-Dec)
+        const completedCounts = Array(12).fill(0);
+        const missedCounts = Array(12).fill(0);
+
+        // Process the appointments
+        appointmentDocs.forEach((doc) => {
+            const appointmentData = doc.data();
+            const status = appointmentData.status.toLowerCase(); // Ensure status is lowercase
+            const appointmentDate = new Date(appointmentData.date);
+
+            // Only process valid dates
+            if (!isNaN(appointmentDate.getTime())) {
+                const month = appointmentDate.getMonth(); // Get the month (0 = Jan, 11 = Dec)
+
+                if (status === "completed") {
+                    completedCounts[month]++;
+                } else if (status === "missed") {
+                    missedCounts[month]++;
+                }
+            }
+        });
+
+        // Chart data configuration
+        const lineChartData = {
+            labels: [
+                "January", "February", "March", "April", "May", "June",
+                "July", "August", "September", "October", "November", "December"
+            ],
+            datasets: [
+                {
+                    label: "Completed Appointments",
+                    data: completedCounts,
+                    borderColor: "#4caf50", // Green line
+                    backgroundColor: "rgba(76, 175, 80, 0.2)", // Green fill
+                    tension: 0.3, // Smooth curve
+                    fill: true,
+                },
+                {
+                    label: "Missed Appointments",
+                    data: missedCounts,
+                    borderColor: "#f44336", // Red line
+                    backgroundColor: "rgba(244, 67, 54, 0.2)", // Red fill
+                    tension: 0.3, // Smooth curve
+                    fill: true,
+                },
+            ],
+        };
+
+        // Ensure the canvas element is accessible and not null
+        const lineChartCanvas = document.getElementById("lineChart") as HTMLCanvasElement | null;
+
+        if (!lineChartCanvas) {
+            console.error("Error: The line chart canvas element was not found.");
+            return; // Stop further execution if the element doesn't exist
+        }
+
+        // Destroy any existing chart instance to avoid conflicts
+        if ((lineChartCanvas as any).chartInstance) {
+            (lineChartCanvas as any).chartInstance.destroy();
+            // Reset the chart instance after destruction to avoid residual references
+            delete (lineChartCanvas as any).chartInstance;
+        }
+
+        // Create the line chart
+        (lineChartCanvas as any).chartInstance = new Chart(lineChartCanvas, {
+            type: "line",
+            data: lineChartData,
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: "top",
+                    },
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: "Months",
+                        },
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: "Number of Appointments",
+                        },
+                        beginAtZero: true,
+                    },
+                },
+            },
+        });
+
+        console.log("Line chart for Completed vs Missed Appointments created!");
+    } catch (error) {
+        console.error("Error creating line chart:", error);
+    }
+}
+
+// Call the function to render the chart
+createCompletedMissedLineChart();
+
+
     // Fetch data on component mount
     fetchDashboardData();
+
+    createAppointmentStatusPieChart() ;
+    createGenderDistributionChart();
+    fetchWeeklyAppointments();
+ 
     
     onMount(async () => {
     // Fetch dashboard data from Firebase
@@ -711,7 +1052,13 @@ async function fetchPrescriptionsData() {
     await fetchGraphData();
 
     // Create the charts
-    createCharts();
+    // createCharts();
+
+    createAppointmentStatusPieChart() 
+
+    createGenderDistributionChart() 
+    fetchWeeklyAppointments();
+    
   });
 
 </script>
@@ -738,7 +1085,7 @@ async function fetchPrescriptionsData() {
     }
 
     .content {
-        margin-top: -15px;
+        margin-top: 10px;
         margin-left: 12.8rem;
         flex-grow: 1;
         padding-right: 1rem;
@@ -817,13 +1164,13 @@ async function fetchPrescriptionsData() {
         margin: 0;
         color: #555;
     }
-    .chart {
-        margin-top: -2rem;
-        margin-left: 20px; /* Adjust this value to move the content to the left */
-        width: 78%; /* Adjust the width as needed */
-        height: 300px; /* Adjust the height to make it shorter */
-        padding: 20px; /* Adds padding inside the container */
-    }
+    /* .chart {
+        margin-top: 2rem;
+        margin-left: 20px; 
+        width: 50%; 
+        height: 200px; 
+        padding: 20px; 
+    } */
 
     table {
     width: 100%;
@@ -865,14 +1212,128 @@ tbody tr:hover {
         border: none;
         cursor: pointer;
         outline: none;
-        margin-top: -2.2rem;
+        margin-top: -1.5rem;
         margin-left: 4.2rem;
         margin-bottom: 1rem;
 }
 
 .download-button:hover {
     background: linear-gradient(90deg, #005b80, #08B8F3);
-        transform: translateY(2px);}
+        transform: translateY(2px);
+
+}
+.chart{
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    background-color: #f9f9f9;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    padding: 25px;
+}
+.chart-container {
+    display: flex; /* Align charts horizontally */
+    justify-content: space-between; /* Space charts evenly */
+    margin-top: 2rem;
+    height: 400px; /* Set a fixed height for both charts */
+    gap: 10px; 
+}
+
+.chart,
+.appointment-status {
+    width: 48%; /* Adjust the width to your preference */
+    height: 100%; /* Ensure both containers take the same height */
+    padding: 10px;
+    box-sizing: border-box; /* Ensure padding is included in the width calculation */
+}
+
+.piechart {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    margin: 0;
+    padding: 50px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    background-color: #f9f9f9;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    width: 60%; /* Make the pie chart container take up the full width */
+    height: 105%; /* Ensure the pie chart fills the entire container */
+    margin-top: -8px;
+}
+
+.piechart h2 {
+    font-size: 15px;
+    color: #333;
+    margin-bottom: 10px;
+    text-align: center;
+}
+.genderchart{
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    background-color: #f9f9f9;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    padding: 50px;
+    margin-left: -280px;
+}
+.genderchart h2{
+    font-size: 15px;
+    color: #333;
+    margin-bottom: 10px;
+    text-align: center;
+}
+.barchart {
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    background-color: #f9f9f9;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    padding: 25px;
+    width: 100%;
+    max-width: 700px; /* Limit the width to prevent it from stretching too much */
+    margin: 0 auto; /* Center the chart horizontally */
+    box-sizing: border-box;
+    margin-top: 20px;
+}
+
+.barchart h2 {
+    font-size: 18px;
+    color: #333;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+#weeklyAppointmentsBarChart {
+    width: 100%;  /* Ensure canvas is responsive */
+    height: 350px; /* Fixed height for the bar chart */
+}
+
+canvas {
+    width: 100%;  /* Make canvas responsive */
+    height: 100%; /* Make canvas responsive */
+}
+.appointments-table {
+    margin-top: 2rem;
+    padding: 15px;
+    background-color: #f9f9f9;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+table th, table td {
+    padding: 10px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+table th {
+    background-color: #f1f1f1;
+    font-weight: bold;
+}
+
 
 </style>
 
@@ -1004,14 +1465,37 @@ tbody tr:hover {
         </tbody>
     </table>
 {/if}  
-            <div class="chart">
-                <div>
+</div>
+
+            <div class="chart-container">
+                <!-- <div class="chart">
                     <h2>New Appointments</h2>
                     <canvas id="barChart"></canvas>
+                </div> -->
+                <div class="chart">
+                    <h2>Appointments Throughout the Year</h2>
+                    <canvas id="lineChart"></canvas>
+                </div>
+                
+
+                <div class="appointment-status">
+                    <!-- Pie chart container -->
+                    <div class="piechart">
+                        <h2>Appointment Status</h2>
+                        <canvas id="appointmentStatusPieChart" width="250" height="250"></canvas> <!-- Adjusted size -->
+                    </div>
+                </div>
+                <div class="genderchart">
+                    <h2>Patient Gender</h2>
+                    <canvas id="genderDistributionDoughnutChart" width="250" height="250"></canvas>
                 </div>
             </div>
+
+            <div class="barchart">
+                <h2>Weekly Patient Count</h2>
+                <!-- Bar chart for weekly appointments -->
+                <canvas id="weeklyAppointmentsBarChart" width="400" height="200"></canvas>
+            </div>
             
-        </div>
-        
     </div>
 </div>
