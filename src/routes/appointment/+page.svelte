@@ -585,7 +585,7 @@ const confirmStatusChange = async (id: string, status: string) => {
   export const appointmentStore = writable<Appointment[]>([]);
 
 
- export const handleCompletedAppointment = async (appointmentId: string, newStatus: string, remarks: string) => {
+  export const handleCompletedAppointment = async (appointmentId: string, newStatus: string, remarks: string) => {
   try {
     // Ensure remarks is never undefined, default to an empty string if necessary
     const remarksToSave = remarks || '';
@@ -602,8 +602,8 @@ const confirmStatusChange = async (id: string, status: string) => {
       return; // Prevent update if remarks are not provided
     }
 
-      // Confirm the action with SweetAlert
-      const result = await Swal.fire({
+    // Confirm the action with SweetAlert
+    const result = await Swal.fire({
       title: 'Are you sure?',
       text: `Do you want to mark this appointment as ${newStatus}?`,
       icon: 'warning',
@@ -620,17 +620,26 @@ const confirmStatusChange = async (id: string, status: string) => {
     // Get a reference to the appointment document in Firestore
     const appointmentRef = doc(db, 'appointments', appointmentId);
 
-    // Update the status and remarks field in Firestore
+    // Get the current timestamp for the appointment completion time
+    const completionTime = newStatus === 'Completed' ? new Date().toISOString() : null;
+
+    // Update the status, remarks, and completion time field in Firestore
     await updateDoc(appointmentRef, {
       status: newStatus === 'Completed' ? 'Completed' : 'Missed',
       remarks: remarksToSave, // Save the remarks entered by the user
+      completionTime: completionTime, // Save the timestamp for completed appointments
     });
 
     // Optimistically update the local state
     appointmentStore.update((prevAppointments: Appointment[]) =>
       prevAppointments.map((appointment: Appointment) =>
         appointment.id === appointmentId
-          ? { ...appointment, status: newStatus === 'Completed' ? 'Completed' : 'Missed', remarks: remarksToSave }
+          ? { 
+              ...appointment, 
+              status: newStatus === 'Completed' ? 'Completed' : 'Missed', 
+              remarks: remarksToSave,
+              completionTime: completionTime, // Update the local completion time
+            }
           : appointment
       )
     );
@@ -638,27 +647,28 @@ const confirmStatusChange = async (id: string, status: string) => {
     // If re-fetching is still needed
     await fetchAppointments();
 
-     // Show success alert
-     await Swal.fire({
+    // Show success alert
+    await Swal.fire({
       title: 'Success!',
       text: `The appointment has been marked as ${newStatus}.`,
       icon: 'success',
     }).then(async (result) => {
-    if (result.isConfirmed) {
-      // Fetch appointments after the user clicks "OK"
-      await fetchAppointments();
-    }
-  });
+      if (result.isConfirmed) {
+        // Fetch appointments after the user clicks "OK"
+        await fetchAppointments();
+      }
+    });
   } catch (error) {
     console.error('Error updating appointment status:', error);
-     // Show error alert
-     await Swal.fire({
+    // Show error alert
+    await Swal.fire({
       title: 'Error!',
       text: 'There was an error updating the appointment. Please try again.',
       icon: 'error',
     });
   }
 };
+
 
 async function acceptReschedule(appointmentId: string) {
   const result = await Swal.fire({
@@ -1106,26 +1116,35 @@ async function rejectReschedule(appointmentId: string, previousDate: string | un
       {#each filterAppointments(currentView) as appointment}
         <article class="appointment-card">
           <section class="appointment-details">
-             <!-- Date & Time Section -->
-             <div style="margin-bottom: 10px;">
+            
+            <!-- Patient Name Section -->
+            <p class="appointment-patient">
+              {#each patientProfiles as profile (profile.id)}
+                {#if profile.id === appointment.patientId}
+                  <strong>{profile.name} {profile.lastName}</strong> ({profile.age} years old)
+                {/if}
+              {/each}
+            </p>
+    
+            <!-- Date & Time Section -->
+            <div style="margin-bottom: 10px;">
               <p style="margin: 5px 0 0; font-size: 0.95em; color: #555;">
                 <strong>{new Date(appointment.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</strong>
                 <span> | {appointment.time}</span>
               </p>
             </div>
+    
+           <!-- Service Section -->
+<p class="appointment-service">Service: {appointment.service}</p>
 
-            <p class="appointment-patient">
-              {#each patientProfiles as profile (profile.id)}
-                {#if profile.id === appointment.patientId}
-                  {profile.name} {profile.lastName} ({profile.age} years old)
-                {/if}
-              {/each}
-            </p>
-            <p class="appointment-service">Service: {appointment.service}</p>
+{#if appointment.subServices && appointment.subServices.length > 0}
+  <p class="appointment-service">Sub-services: {appointment.subServices.join(', ')}</p>
+{/if}
+
+    
+            <!-- Remarks Section -->
             <div class="remarks-container">
-              <label for="remarks-{appointment.id}" class="remarks-label">
-                Remarks:
-              </label>
+              <label for="remarks-{appointment.id}" class="remarks-label">Remarks:</label>
               <input
                 type="text"
                 id="remarks-{appointment.id}"
@@ -1138,28 +1157,32 @@ async function rejectReschedule(appointmentId: string, previousDate: string | un
             
           </section>
         </article>
-     
-    <div class="appointment-buttons">
-      <button
-      on:click={() => openModal(appointment.id)}
-      class="bg-green-100 text-green-500 px-3 py-1 rounded"
-      disabled={prescriptionAdded}  
-    >
-      Add Prescription
-    </button>
-      <button
-        class="bg-blue-100"
-        on:click={() => handleCompletedAppointment(appointment.id, 'Completed', appointment.remarks || '')}
-      >
-        Completed
-      </button>
-      <button
-        class="bg-red-100"
-        on:click={() => handleCompletedAppointment(appointment.id, 'Missed', appointment.remarks || '')}
-      >
-        Missed
-      </button>
-    </div>
+    
+        <!-- Appointment Buttons Section -->
+        <div class="appointment-buttons">
+          <button
+            on:click={() => openModal(appointment.id)}
+            class="bg-green-100 text-green-500 px-3 py-1 rounded"
+            disabled={prescriptionAdded}
+          >
+            Add Prescription
+          </button>
+          <button
+            class="bg-blue-100"
+            on:click={() => handleCompletedAppointment(appointment.id, 'Completed', appointment.remarks || '')}
+          >
+            Completed
+          </button>
+          <button
+            class="bg-red-100"
+            on:click={() => handleCompletedAppointment(appointment.id, 'Missed', appointment.remarks || '')}
+          >
+            Missed
+          </button>
+        </div>
+    
+    
+    
  
 {/each}
 {:else}
@@ -1627,49 +1650,55 @@ async function rejectReschedule(appointmentId: string, previousDate: string | un
       font-size: 0.75rem;
     }
   }
-.appointment-card {
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 12px;
-  background-color: #f9f9f9;
+  .appointment-card {
+  border: 1px solid #b0bec5; 
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 0; /* Tanggalin ang margin sa ibaba */
+  background-color: #ffffff;
 }
 
 .appointment-details {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0; /* Tanggalin ang gap sa pagitan ng mga elements */
 }
 
-
 .appointment-patient {
-  font-size: 1em;
-  color: #555;
+  font-size: 1.1em;
+  color: #2c3e50;
+  font-weight: 500;
+  margin-bottom: 0; /* Tanggalin ang margin sa ibaba */
 }
 
 .appointment-service {
   font-size: 1em;
-  color: #666;
+  color: #34495e;
+  margin-bottom: 0; /* Tanggalin ang margin sa ibaba */
 }
 
 .remarks-container {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 0; /* Tanggalin ang gap sa pagitan ng remarks at input */
 }
 
 .remarks-input {
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  padding: 8px; /* I-adjust ang padding kung kinakailangan */
+  border: 1px solid #bdc3c7;
+  border-radius: 6px;
   font-size: 1em;
   width: 100%;
+  background-color: #f8f9fa;
+  margin-bottom: 0; /* Tanggalin ang margin sa ibaba */
 }
 
-.remarks-input:focus {
-  border-color: #007bff;
-  outline: none;
-  box-shadow: 0 0 4px rgba(0, 123, 255, 0.5);
+.appointment-buttons {
+  display: flex;
+  gap: 5px; /* Konting gap para hindi magdikit ang buttons */
+  margin-top: 10px; /* Magdagdag ng kaunting space sa ibabaw ng buttons */
 }
+
+
 
 </style>
