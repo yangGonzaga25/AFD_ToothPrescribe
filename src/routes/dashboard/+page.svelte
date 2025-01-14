@@ -14,12 +14,12 @@
     import { jsPDF } from 'jspdf'; // Import jsPDF
 import autoTable from 'jspdf-autotable'; // Import autoTable
     
+const currentYear = new Date().getFullYear();
+const years = Array.from({ length: 10 }, (_, i) => currentYear - i);
+
     let isCollapsed = false;
 
- 
-
-    // Define a type for the stats
-    type Stats = {
+     type Stats = {
         newAppointments: number;
         totalPatients: number;
         todaysPatients: number;
@@ -50,8 +50,7 @@ import autoTable from 'jspdf-autotable'; // Import autoTable
     let dateLabels: string[] = [];
 let totalPatientsPerDay: number[] = []; // Line graph data (number of patients)
 let newAppointmentsPerDay: number[] = []; // Bar graph data (number of appointments)
-let averageNewAppointments: number = 0;
-let averageTotalPatients: number = 0;
+
 let patients: any[] = [];
 let prescriptions: any[] = [];
 let monthlyAppointments: any[] = [];
@@ -65,7 +64,13 @@ let dailyAppointments = [
     { day: "Friday", count: 0 },
     { day: "Sunday", count: 0 }
 ];
+let monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+];
+let selectedYear = currentYear; // Default to the current year
 
+let selectedMonth = new Date().getMonth() + 1; // Default to current month
 
 interface PrescriptionData {
     id?: string; // Optional if you don't want to require it
@@ -393,25 +398,22 @@ async function downloadExcelReport() {
     openTableHandler('patients'); // Open patients table
 }
     
-    
-async function fetchGraphData() {
+async function fetchGraphData(year: number, month: number) {
     try {
         const appointmentsCollection = collection(db, "appointments");
         const appointmentDocs = await getDocs(appointmentsCollection);
 
         const appointmentCountByDate: Record<string, number> = {};
-        const currentMonth = new Date().getMonth() + 1; // Months are 0-indexed
-        const currentYear = new Date().getFullYear();
-
-        // Loop through appointments and group them by date for the current month
+        
+        // Loop through appointments and group them by date for the selected month and year
         appointmentDocs.forEach((doc) => {
             const data = doc.data();
             const appointmentDate = new Date(data.date); // Assuming the date is stored in a field called "date"
             const appointmentMonth = appointmentDate.getMonth() + 1; // Get month (0-indexed)
             const appointmentYear = appointmentDate.getFullYear(); // Get year
 
-            // Check if the appointment is in the current month and year
-            if (appointmentMonth === currentMonth && appointmentYear === currentYear) {
+            // Check if the appointment is in the selected month and year
+            if (appointmentMonth === month && appointmentYear === year) {
                 const dateString = appointmentDate.toISOString().split('T')[0]; // Format date as 'YYYY-MM-DD'
                 if (appointmentCountByDate[dateString]) {
                     appointmentCountByDate[dateString]++;
@@ -429,20 +431,20 @@ async function fetchGraphData() {
         totalPatientsPerDay = [];
         let cumulativeTotal = 0;
 
-        // Fetch patients for the current month
+        // Fetch patients for the selected month and year
         const patientCollection = collection(db, "patientProfiles");
         const patientDocs = await getDocs(patientCollection);
         const patientCountByDate: Record<string, number> = {};
 
-        // Loop through patients and group them by registration date for the current month
+        // Loop through patients and group them by registration date for the selected month and year
         patientDocs.forEach((doc) => {
             const data = doc.data();
             const registrationDate = new Date(data.registrationDate); // Assuming patients have a "registrationDate" field
             const registrationMonth = registrationDate.getMonth() + 1; // Get month (0-indexed)
             const registrationYear = registrationDate.getFullYear(); // Get year
 
-            // Check if the registration is in the current month and year
-            if (registrationMonth === currentMonth && registrationYear === currentYear) {
+            // Check if the registration is in the selected month and year
+            if (registrationMonth === month && registrationYear === year) {
                 const dateString = registrationDate.toISOString().split('T')[0]; // Format date as 'YYYY-MM-DD'
                 if (patientCountByDate[dateString]) {
                     patientCountByDate[dateString]++;
@@ -462,74 +464,6 @@ async function fetchGraphData() {
         console.error("Error fetching data:", error);
     }
 }
-
-// function createCharts() {
-//     // Sort dateLabels in ascending order based on date
-//     const sortedDates = dateLabels.sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
-
-//     // Bar Chart for New Appointments
-//     new Chart(document.getElementById('barChart') as HTMLCanvasElement, {
-//         type: 'bar', // Specify the chart type
-//         data: {
-//             labels: sortedDates, // Use sorted date as labels
-//             datasets: [{
-//                 label: 'New Appointments',
-//                 data: newAppointmentsPerDay,
-//                 backgroundColor: 'rgba(75, 192, 192, 0.2)',
-//                 borderColor: 'rgba(75, 192, 192, 1)',
-//                 borderWidth: 1
-//             }]
-//         },
-//         options: {
-//             scales: {
-//                 y: {
-//                     beginAtZero: true,
-//                     ticks: {
-//                         // Ensure that only whole numbers are shown
-//                         stepSize: 1,
-//                         callback: function(value) {
-//                             if (Number.isInteger(value)) {
-//                                 return value; // Only return whole numbers
-//                             }
-//                         }
-//                     }
-//                 }
-//             }
-//         }
-//     });
-
-//         // Line Chart for Patients
-//         new Chart(document.getElementById('lineChart') as HTMLCanvasElement, {
-//         type: 'line', // Specify the chart type
-//         data: {
-//             labels: sortedDates, // Use the sorted date labels
-//             datasets: [{
-//                 label: 'Total Patients',
-//                 data: totalPatientsPerDay,
-//                 backgroundColor: 'rgba(153, 102, 255, 0.2)',
-//                 borderColor: 'rgba(153, 102, 255, 1)',
-//                 borderWidth: 1
-//             }]
-//         },
-//         options: {
-//             scales: {
-//                 y: {
-//                     beginAtZero: true,
-//                     ticks: {
-//                         // Ensure that only whole numbers are shown
-//                         stepSize: 1,
-//                         callback: function(value) {
-//                             if (Number.isInteger(value)) {
-//                                 return value; // Only return whole numbers
-//                             }
-//                         }
-//                     }
-//                 }
-//             }
-//         }
-//     });
-// }
-
 
     function toggleAppointments() {
         isViewingAppointments = !isViewingAppointments; // Toggle the view on/off
@@ -598,42 +532,105 @@ async function fetchGraphData() {
         
     }
 }
-async function fetchMonthlyAppointments() {
-    try {
-        const currentMonth = new Date().getMonth() + 1; // Months are 0-indexed
-        const currentYear = new Date().getFullYear();
 
-        const appointmentsCollection = collection(db, "appointments");
-        const appointmentDocs = await getDocs(appointmentsCollection);
+function renderLineChart() {
+    const lineChartData = {
+        labels: dateLabels,
+        datasets: [
+            {
+                    label: "New Appointments",
+                    data: newAppointmentsPerDay,
+                    borderColor: "#4caf50", // Green line
+                    backgroundColor: "rgba(76, 175, 80, 0.2)", // Green fill
+                    tension: 0.3, // Smooth curve
+                    fill: true,
+                },
+                {
+                    label: "Total Patients",
+                    data: totalPatientsPerDay,
+                    borderColor: "#f44336", // Red line
+                    backgroundColor: "rgba(244, 67, 54, 0.2)", // Red fill
+                    tension: 0.3, // Smooth curve
+                    fill: true,
+                },
+            ],
+        };
 
-        // Filter appointments for the current month and year
-        const filteredAppointments = appointmentDocs.docs.filter(appointmentDoc => {
-            const data = appointmentDoc.data();
-            const appointmentDate = new Date(data.date); // Assuming date is in a valid format
-            return appointmentDate.getMonth() + 1 === currentMonth && appointmentDate.getFullYear() === currentYear;
+        const lineChartCanvas = document.getElementById("lineChart") as HTMLCanvasElement | null;
+
+        if (!lineChartCanvas) {
+            console.error("Error: The line chart canvas element was not found.");
+            return; 
+        }
+
+        if ((lineChartCanvas as any).chartInstance) {
+            (lineChartCanvas as any).chartInstance.destroy();
+            delete (lineChartCanvas as any).chartInstance;
+        }
+
+        (lineChartCanvas as any).chartInstance = new Chart(lineChartCanvas, {
+            type: "line",
+            data: lineChartData,
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: "top",
+                    },
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: "Dates",
+                        },
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: "Number of Appointments",
+                        },
+                        beginAtZero: true,
+                    },
+                },
+            },
         });
 
-        // Fetch patient names for the filtered appointments
-        monthlyAppointments = await Promise.all(filteredAppointments.map(async (appointmentDoc) => {
-            const appointmentData = appointmentDoc.data();
-            const patientId = appointmentData.patientId;
-
-            const patientDocRef = doc(db, "patientProfiles", patientId);
-            const patientDocSnap = await getDoc(patientDocRef);
-            const patientData = patientDocSnap.data() as PatientData; // Cast to PatientData
-
-            const patientName = patientData ? `${patientData.name} ${patientData.lastName}` : "Unknown Patient";
-
-            return { id: appointmentDoc.id, ...appointmentData, patientName }; // Include patient name
-        }));
-
-       
-    } catch (error) {
-        console.error("Error fetching monthly appointments:", error);
+        console.log("Line chart updated successfully!");
     }
-    openTableHandler('monthlyAppointments'); // Open monthly appointments table
 
-}
+async function fetchMonthlyAppointments() {
+        try {
+            const appointmentsCollection = collection(db, "appointments");
+            const appointmentDocs = await getDocs(appointmentsCollection);
+
+            // Filter appointments for the selected month and year
+            const filteredAppointments = appointmentDocs.docs.filter(appointmentDoc => {
+                const data = appointmentDoc.data();
+                const appointmentDate = new Date(data.date); // Assuming date is in a valid format
+                return appointmentDate.getMonth() + 1 === selectedMonth && appointmentDate.getFullYear() === selectedYear;
+            });
+
+            // Fetch patient names for the filtered appointments
+            monthlyAppointments = await Promise.all(filteredAppointments.map(async (appointmentDoc) => {
+                const appointmentData = appointmentDoc.data();
+                const patientId = appointmentData.patientId;
+
+                const patientDocRef = doc(db, "patientProfiles", patientId);
+                const patientDocSnap = await getDoc(patientDocRef);
+                const patientData = patientDocSnap.data() as PatientData; // Cast to PatientData
+
+                const patientName = patientData ? `${patientData.name} ${patientData.lastName}` : "Unknown Patient";
+
+                return { id: appointmentDoc.id, ...appointmentData, patientName }; // Include patient name
+            }));
+
+        } catch (error) {
+            console.error("Error fetching monthly appointments:", error);
+        }
+        openTableHandler('monthlyAppointments'); // Open monthly appointments table
+    }
 
 async function fetchAppointmentsData() {
     const appointmentsCollection = collection(db, "appointments");
@@ -982,22 +979,18 @@ async function createCompletedMissedLineChart() {
             ],
         };
 
-        // Ensure the canvas element is accessible and not null
         const lineChartCanvas = document.getElementById("lineChart") as HTMLCanvasElement | null;
 
         if (!lineChartCanvas) {
             console.error("Error: The line chart canvas element was not found.");
-            return; // Stop further execution if the element doesn't exist
+            return; 
         }
 
-        // Destroy any existing chart instance to avoid conflicts
         if ((lineChartCanvas as any).chartInstance) {
             (lineChartCanvas as any).chartInstance.destroy();
-            // Reset the chart instance after destruction to avoid residual references
             delete (lineChartCanvas as any).chartInstance;
         }
 
-        // Create the line chart
         (lineChartCanvas as any).chartInstance = new Chart(lineChartCanvas, {
             type: "line",
             data: lineChartData,
@@ -1033,11 +1026,9 @@ async function createCompletedMissedLineChart() {
     }
 }
 
-// Call the function to render the chart
 createCompletedMissedLineChart();
 
 
-    // Fetch data on component mount
     fetchDashboardData();
 
     createAppointmentStatusPieChart() ;
@@ -1045,24 +1036,215 @@ createCompletedMissedLineChart();
     fetchWeeklyAppointments();
  
     
-    onMount(async () => {
-    // Fetch dashboard data from Firebase
+onMount(async () => {
     await fetchDashboardData();
 
-    // Fetch the data for graphs
-    await fetchGraphData();
+    // Pass the current year and month to fetchGraphData
+    const currentYear = new Date().getFullYear();
+    const currentMonth = new Date().getMonth() + 1; // Months are 0-indexed
 
-    // Create the charts
-    // createCharts();
+    await fetchGraphData(currentYear, currentMonth);
 
-    createAppointmentStatusPieChart() 
-
-    createGenderDistributionChart() 
+    createAppointmentStatusPieChart();
+    createGenderDistributionChart();
     fetchWeeklyAppointments();
-    
-  });
+});
 
 </script>
+
+<div class="dashboard">
+    <div class="sidebar {isCollapsed ? 'collapsed' : ''}">
+        <Sidebar {isCollapsed} {toggleSidebar} {logout} />
+    </div>
+
+    <div class="content">
+        <div class="summary">
+            <h2>Data Summary</h2>
+            <select bind:value="{exportType}" class="download-select">
+                <option value="excel">Export as Excel</option>
+                <option value="pdf">Export as PDF</option>
+            </select>
+            <button on:click="{generateReport}" class="download-button">Download Report</button>
+            
+
+        </div>
+        <div class="cards">
+           
+            <button class="card" on:click="{fetchMonthlyAppointments}" type="button">
+                <span class="icon fas fa-calendar-day"></span>
+                <div class="text">
+                    <h3>{stats.monthlyAppointments}</h3>
+                    <p>This Month's Appointments</p>
+                </div>
+            </button>
+            <button class="card" on:click="{fetchAppointments}" type="button">
+                <span class="icon fas fa-calendar-alt"></span>
+                <div class="text">
+                    <h3>{stats.newAppointments}</h3>
+                    <p>Total Appointments</p>
+                </div>
+            </button>
+            <button class="card" on:click="{fetchPatients}" type="button" aria-label="View total patients">
+                <span class="icon fas fa-users"></span>
+                <div class="text">
+                    <h3>{stats.totalPatients}</h3>
+                    <p>Total Patients</p>
+                </div>
+            </button>
+            
+            <button class="card" on:click="{() => goto('/prescription')}" type="button" aria-label="View total prescriptions">
+                <span class="icon fas fa-file-prescription"></span>
+                <div class="text">
+                    <h3>{stats.totalPrescriptions}</h3>
+                    <p>Total Prescriptions</p>
+                </div>
+            </button>
+
+            {#if openTable === 'patients'}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Patient Name</th> <!-- Change the header to "Full Name" -->
+                    </tr>
+                </thead>
+                <tbody>
+                    {#each patients as patient}
+                        <tr>
+                            <td>{patient.name} {patient.lastName}</td> <!-- Concatenate name and lastName -->
+                        </tr>
+                    {/each}
+                </tbody>
+            </table>
+        {/if}
+       
+        {#if openTable === 'monthlyAppointments'}
+        <table>
+            <thead>
+                <tr>
+                    <th>Patient Name</th>
+                    <th>Date</th>
+                    <th>Time</th>
+                </tr>
+            </thead>
+            <tbody>
+                {#each monthlyAppointments as appointment}
+                    <tr>
+                        <td>{appointment.patientName}</td>
+                        <td>{appointment.date}</td>
+                        <td>{appointment.time}</td>
+                    </tr>
+                {/each}
+            </tbody>
+        </table>
+    {/if}
+        
+    {#if openTable === 'appointments'}
+    <div class="month-filter">
+        <label for="yearSelect">Select Year:</label>
+        <select id="yearSelect" bind:value="{selectedYear}">
+            {#each years as year}
+                <option value="{year}">{year}</option>
+            {/each}
+        </select>
+    
+        <label for="monthSelect">Select Month:</label>
+        <select id="monthSelect" bind:value="{selectedMonth}">
+            {#each monthNames as month, index}
+                <option value="{index + 1}">{month}</option>
+            {/each}
+        </select>
+        
+        <button on:click="{fetchMonthlyAppointments}">Filter</button>
+    </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Patient Name</th>
+                        <th>Date</th>
+                        <th>Time</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {#each appointments as appointment}
+                        <tr>
+                            <td>{appointment.patientName}</td>
+                            <td>{appointment.date}</td>
+                            <td>{appointment.time}</td>
+                        </tr>
+                    {/each}
+                </tbody>
+            </table>
+            {/if}
+        
+        {#if openTable === 'prescriptions'}
+    <table>
+        <thead>
+            <tr>
+                <th>Patient Name</th>
+                <th>Medication</th>
+                <th>Dosage</th>
+                <th>Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            {#each prescriptions as prescription}
+                <tr>
+                    <td>{prescription.patientName}</td>
+                    <td>{prescription.medication}</td>
+                    <td>{prescription.dosage}</td>
+                    <td>{prescription.date}</td>
+                </tr>
+            {/each}
+        </tbody>
+    </table>
+{/if}  
+</div>
+<div class="filter-button">
+    <label for="yearSelect">Select Year:</label>
+    <select id="yearSelect" bind:value="{selectedYear}">
+        {#each years as year}
+            <option value="{year}">{year}</option>
+        {/each}
+    </select>
+
+    <label for="monthSelect">Select Month:</label>
+    <select id="monthSelect" bind:value="{selectedMonth}">
+        {#each monthNames as month, index}
+            <option value="{index + 1}">{month}</option>
+        {/each}
+    </select>
+    
+    <button on:click="{async () => {
+        await fetchGraphData(selectedYear, selectedMonth);
+        renderLineChart(); // Call to render the chart after fetching data
+    }}">Filter</button>
+</div>
+            <div class="chart-container">
+                <div class="chart">
+                    <h2>Appointments Throughout the Year</h2>
+                    <canvas id="lineChart"></canvas>
+                </div>
+        
+                <div class="appointment-status">
+                    <!-- Pie chart container -->
+                    <div class="piechart">
+                        <h2>Appointment Status</h2>
+                        <canvas id="appointmentStatusPieChart" width="250" height="250"></canvas> <!-- Adjusted size -->
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="barchart">
+                <h2>Weekly Patient Count</h2>
+                <!-- Bar chart for weekly appointments -->
+                <canvas id="weeklyAppointmentsBarChart" width="400" height="200"></canvas>
+            </div>
+            
+    </div>
+</div>
+
 
 <style>
     .dashboard {
@@ -1165,13 +1347,6 @@ createCompletedMissedLineChart();
         margin: 0;
         color: #555;
     }
-    /* .chart {
-        margin-top: 2rem;
-        margin-left: 20px; 
-        width: 50%; 
-        height: 200px; 
-        padding: 20px; 
-    } */
 
     table {
     width: 100%;
@@ -1186,7 +1361,7 @@ th, td {
 }
 
 th {
-    background-color: #00a2e8; /* Green background for header */
+    background-color: #08B8F3; /* Green background for header */
     color: white; /* White text for header */
 }
 
@@ -1203,8 +1378,8 @@ tbody tr:hover {
        background: linear-gradient(90deg, #08B8F3, #005b80);
         color: rgb(255, 255, 255);
         font-family: 'Roboto', sans-serif;
-        font-weight: 550;
-        padding: 0.5rem 1rem;
+        font-weight: 50;
+        padding: 0.4rem 1rem;
         border-radius: 0.3rem;
         box-shadow: 0 2px 6px rgba(0, 0, 0, 0.582);
         display: flex;
@@ -1213,8 +1388,8 @@ tbody tr:hover {
         border: none;
         cursor: pointer;
         outline: none;
-        margin-top: -1.5rem;
-        margin-left: 4.2rem;
+        margin-top: -2rem;
+        margin-left: 9.2rem;
         margin-bottom: 1rem;
 }
 
@@ -1238,12 +1413,22 @@ tbody tr:hover {
     gap: 10px; 
 }
 
-.chart,
+.chart {
+    width: 43.2%; /* Increase the width of the line chart */
+    height: 70%; /* Ensure both containers take the same height */
+    padding: 20px;
+    box-sizing: border-box; 
+}
+.chart h2 {
+    font-size: 18px; /* Set the font size to 18px */
+    margin-bottom: 10px; /* Optional: Adjust margin for spacing */
+}
+
 .appointment-status {
-    width: 48%; /* Adjust the width to your preference */
+    width: 30%; /* Adjust the width of the pie chart container */
     height: 100%; /* Ensure both containers take the same height */
     padding: 10px;
-    box-sizing: border-box; /* Ensure padding is included in the width calculation */
+    box-sizing: border-box; 
 }
 
 .piechart {
@@ -1252,47 +1437,37 @@ tbody tr:hover {
     align-items: center;
     flex-direction: column;
     margin: 0;
-    padding: 50px;
     border: 1px solid #ddd;
+    padding: 29px;
+    margin-left: 73px;
     border-radius: 10px;
     background-color: #f9f9f9;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    width: 60%; /* Make the pie chart container take up the full width */
-    height: 105%; /* Ensure the pie chart fills the entire container */
-    margin-top: -8px;
+    width: 80%; /* Make the pie chart container take up the full width */
+    height: 280px;
+    margin-top: -10px;
 }
 
 .piechart h2 {
-    font-size: 15px;
+    font-size: 18px;
     color: #333;
     margin-bottom: 10px;
     text-align: center;
 }
-.genderchart{
-    border: 1px solid #ddd;
-    border-radius: 10px;
-    background-color: #f9f9f9;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    padding: 50px;
-    margin-left: -280px;
-}
-.genderchart h2{
-    font-size: 15px;
-    color: #333;
-    margin-bottom: 10px;
-    text-align: center;
-}
+
 .barchart {
     border: 1px solid #ddd;
     border-radius: 10px;
     background-color: #f9f9f9;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    padding: 25px;
+    padding: 20px;
     width: 100%;
-    max-width: 700px; /* Limit the width to prevent it from stretching too much */
+    max-width: 370px;
+    height: 280px; /* Limit the width to prevent it from stretching too much */
     margin: 0 auto; /* Center the chart horizontally */
+    margin-top: -400px; /* Adjust this if needed */
+    margin-left: 490px; /* Add left margin to move it to the right */
     box-sizing: border-box;
-    margin-top: 20px;
 }
 
 .barchart h2 {
@@ -1311,192 +1486,80 @@ canvas {
     width: 100%;  /* Make canvas responsive */
     height: 100%; /* Make canvas responsive */
 }
-.appointments-table {
-    margin-top: 2rem;
-    padding: 15px;
+
+.month-filter {
+    display: flex;
+    align-items: center;
+    margin: 3px 0 -29px;
+    padding: 6px;
     background-color: #f9f9f9;
-    border-radius: 10px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-table th, table td {
-    padding: 10px;
-    text-align: left;
-    border-bottom: 1px solid #ddd;
-}
-
-table th {
-    background-color: #f1f1f1;
+.month-filter label {
+    margin-right: 10px;
     font-weight: bold;
 }
 
+.month-filter select {
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-right: 10px;
+    font-size: 16px;
+}
 
+.month-filter button {
+    background: linear-gradient(90deg, #08B8F3, #005b80);
+    color: white;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.month-filter button:hover {
+    background: linear-gradient(90deg, #005b80, #08B8F3);
+}
+
+.filter-button {
+    display: flex;
+    align-items: center;
+    margin: 20px 0 -22px; /* Space above and below the filter section */
+    padding: 10px; /* Padding for better spacing */
+    background-color: #f9f9f9; /* Light background color */
+    border: 1px solid #ddd; /* Border for the filter section */
+    border-radius: 8px; /* Rounded corners */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
+}
+
+.filter-button label {
+    margin-right: 10px; /* Space between label and select */
+    font-weight: bold; /* Make the label bold */
+}
+
+.filter-button select {
+    padding: 6px; /* Padding inside the select box */
+    border: 1px solid #ddd; /* Border for the select box */
+    border-radius: 4px; /* Rounded corners */
+    margin-right: 10px; /* Space between select and button */
+    font-size: 16px; /* Font size for better readability */
+}
+
+.filter-button button {
+    background: linear-gradient(90deg, #08B8F3, #005b80); /* Gradient background */
+    color: white; /* White text color */
+    padding: 6px 12px; /* Padding for the button */
+    border: none; /* Remove default border */
+    border-radius: 4px; /* Rounded corners */
+    cursor: pointer; /* Pointer cursor on hover */
+    transition: background 0.3s ease; /* Smooth transition for background */
+}
+
+.filter-button button:hover {
+    background: linear-gradient(90deg, #005b80, #08B8F3); /* Change gradient on hover */
+}
 </style>
-
-<div class="dashboard">
-    <div class="sidebar {isCollapsed ? 'collapsed' : ''}">
-        <Sidebar {isCollapsed} {toggleSidebar} {logout} />
-    </div>
-
-    <div class="content">
-        <div class="summary">
-            <h2>Data Summary</h2>
-            <select bind:value="{exportType}" class="download-select">
-                <option value="excel">Excel</option>
-                <option value="pdf">PDF</option>
-            </select>
-            <button on:click="{generateReport}" class="download-button">Download Report</button>
-            
-
-        </div>
-        <div class="cards">
-           
-            <button class="card" on:click="{fetchMonthlyAppointments}" type="button">
-                <span class="icon fas fa-calendar-day"></span>
-                <div class="text">
-                    <h3>{stats.monthlyAppointments}</h3>
-                    <p>This Month's Appointments</p>
-                </div>
-            </button>
-            <button class="card" on:click="{fetchAppointments}" type="button">
-                <span class="icon fas fa-calendar-alt"></span>
-                <div class="text">
-                    <h3>{stats.newAppointments}</h3>
-                    <p>Total Appointments</p>
-                </div>
-            </button>
-            <button class="card" on:click="{fetchPatients}" type="button" aria-label="View total patients">
-                <span class="icon fas fa-users"></span>
-                <div class="text">
-                    <h3>{stats.totalPatients}</h3>
-                    <p>Total Patients</p>
-                </div>
-            </button>
-            
-            <button class="card" on:click="{() => goto('/prescription')}" type="button" aria-label="View total prescriptions">
-                <span class="icon fas fa-file-prescription"></span>
-                <div class="text">
-                    <h3>{stats.totalPrescriptions}</h3>
-                    <p>Total Prescriptions</p>
-                </div>
-            </button>
-            {#if openTable === 'patients'}
-            <table>
-                <thead>
-                    <tr>
-                        <th>Patient Name</th> <!-- Change the header to "Full Name" -->
-                    </tr>
-                </thead>
-                <tbody>
-                    {#each patients as patient}
-                        <tr>
-                            <td>{patient.name} {patient.lastName}</td> <!-- Concatenate name and lastName -->
-                        </tr>
-                    {/each}
-                </tbody>
-            </table>
-        {/if}
-        
-        {#if openTable === 'monthlyAppointments'}
-            <table>
-                <thead>
-                    <tr>
-                        <th>Patient Name</th>
-                        <th>Date</th>
-                        <th>Time</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {#each monthlyAppointments as appointment}
-                        <tr>
-                            <td>{appointment.patientName}</td>
-                            <td>{appointment.date}</td>
-                            <td>{appointment.time}</td>
-                        </tr>
-                    {/each}
-                </tbody>
-            </table>
-        {/if}
-        
-        {#if openTable === 'appointments'}
-            <table>
-                <thead>
-                    <tr>
-                        <th>Patient Name</th>
-                        <th>Date</th>
-                        <th>Time</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {#each appointments as appointment}
-                        <tr>
-                            <td>{appointment.patientName}</td>
-                            <td>{appointment.date}</td>
-                            <td>{appointment.time}</td>
-                        </tr>
-                    {/each}
-                </tbody>
-            </table>
-        {/if}
-        
-        {#if openTable === 'prescriptions'}
-    <table>
-        <thead>
-            <tr>
-                <th>Patient Name</th>
-                <th>Medication</th>
-                <th>Dosage</th>
-                <th>Date</th>
-            </tr>
-        </thead>
-        <tbody>
-            {#each prescriptions as prescription}
-                <tr>
-                    <td>{prescription.patientName}</td>
-                    <td>{prescription.medication}</td>
-                    <td>{prescription.dosage}</td>
-                    <td>{prescription.date}</td>
-                </tr>
-            {/each}
-        </tbody>
-    </table>
-{/if}  
-</div>
-
-            <div class="chart-container">
-                <!-- <div class="chart">
-                    <h2>New Appointments</h2>
-                    <canvas id="barChart"></canvas>
-                </div> -->
-                <div class="chart">
-                    <h2>Appointments Throughout the Year</h2>
-                    <canvas id="lineChart"></canvas>
-                </div>
-                
-
-                <div class="appointment-status">
-                    <!-- Pie chart container -->
-                    <div class="piechart">
-                        <h2>Appointment Status</h2>
-                        <canvas id="appointmentStatusPieChart" width="250" height="250"></canvas> <!-- Adjusted size -->
-                    </div>
-                </div>
-                <div class="genderchart">
-                    <h2>Patient Gender</h2>
-                    <canvas id="genderDistributionDoughnutChart" width="250" height="250"></canvas>
-                </div>
-            </div>
-
-            <div class="barchart">
-                <h2>Weekly Patient Count</h2>
-                <!-- Bar chart for weekly appointments -->
-                <canvas id="weeklyAppointmentsBarChart" width="400" height="200"></canvas>
-            </div>
-            
-    </div>
-</div>
