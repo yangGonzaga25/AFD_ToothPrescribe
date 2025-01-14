@@ -612,31 +612,51 @@ textarea:focus {
         <button class="add-button" on:click={togglePopup}>+Add Medicine</button>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {#each medicines as medicine, index}
-                <div class="bg-white p-4 rounded-lg shadow-md">
-                    <div class="w-full h-40 bg-gray-200 mb-4">
-                        {#if medicine.imageUrl}
-                            <img src={medicine.imageUrl} alt={medicine.name} class="w-full h-full object-cover rounded" />
-                        {:else}
-                            <!-- Placeholder if no image -->
-                        {/if}
-                    </div>
-                    <h2 class="text-lg font-semibold">{medicine.name}</h2>
-                    <p class="text-gray-600 mb-4">{medicine.description}</p>
-                    <div class="controls">
-                        <span>Quantity:{medicine.quantity}</span>
-                        <button class="edit-button" on:click={() => openEditPopup(medicine)}>
-                          <i class="fas fa-edit" style="color: blue;"></i> Edit
-                      </button>
-                      <button class="delete-button" on:click={() => deleteMedicine(medicine)}>
-                          <i class="fas fa-trash" style="color: red;"></i> Delete
-                      </button>
-                      
-                      
-                    </div>
+          {#each medicines as medicine, index}
+            <div class="bg-white p-4 rounded-lg shadow-md flex flex-col justify-between h-full">
+              <!-- Image Section -->
+              <div class="w-full h-40 bg-gray-200 mb-4">
+                {#if medicine.imageUrl}
+                  <img src={medicine.imageUrl} alt={medicine.name} class="w-full h-full object-cover rounded" />
+                {:else}
+                  <div class="flex items-center justify-center w-full h-full bg-gray-100 text-gray-500">
+                    No Image Available
+                  </div>
+                {/if}
+              </div>
+        
+              <!-- Medicine Details -->
+              <div class="flex-1">
+                <h2 class="text-lg font-semibold">{medicine.name}</h2>
+                <p class="text-gray-600 mb-4">{medicine.description}</p>
+              </div>
+        
+              <!-- Quantity, Edit, and Delete Section -->
+              <div class="flex justify-between items-center mt-4 border-t pt-3">
+                <!-- Quantity -->
+                <span class="text-sm font-medium text-gray-700">Quantity: {medicine.quantity}</span>
+        
+                <!-- Edit and Delete Buttons -->
+                <div class="flex gap-2">
+                  <button
+                    class="px-3 py-1 text-sm text-white bg-blue-500 rounded hover:bg-blue-600 flex items-center gap-1"
+                    on:click={() => openEditPopup(medicine)}
+                  >
+                    <i class="fas fa-edit"></i> Edit
+                  </button>
+                  <button
+                    class="px-3 py-1 text-sm text-white bg-red-500 rounded hover:bg-red-600 flex items-center gap-1"
+                    on:click={() => deleteMedicine(medicine)}
+                  >
+                    <i class="fas fa-trash"></i> Delete
+                  </button>
                 </div>
-            {/each}
+              </div>
+            </div>
+          {/each}
         </div>
+        
+        
 
         {#if editPopup && medicineToEdit}
         <div class="edit-popup">
