@@ -856,7 +856,8 @@ async function fetchWeeklyAppointments() {
             { day: "Tuesday", count: 0 },
             { day: "Wednesday", count: 0 },
             { day: "Thursday", count: 0 },
-            { day: "Friday", count: 0 }
+            { day: "Friday", count: 0 },
+            { day: "Sunday", count: 0 }
         ];
 
         // Iterate through the appointments and count the appointments for each day (excluding Saturday)
