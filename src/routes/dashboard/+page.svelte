@@ -600,37 +600,76 @@ function renderLineChart() {
         console.log("Line chart updated successfully!");
     }
 
-async function fetchMonthlyAppointments() {
-        try {
-            const appointmentsCollection = collection(db, "appointments");
-            const appointmentDocs = await getDocs(appointmentsCollection);
+    async function fetchMonthlyAppointments() {
+    try {
+        const appointmentsCollection = collection(db, "appointments");
+        const appointmentDocs = await getDocs(appointmentsCollection);
 
-            // Filter appointments for the selected month and year
-            const filteredAppointments = appointmentDocs.docs.filter(appointmentDoc => {
-                const data = appointmentDoc.data();
-                const appointmentDate = new Date(data.date); // Assuming date is in a valid format
-                return appointmentDate.getMonth() + 1 === selectedMonth && appointmentDate.getFullYear() === selectedYear;
-            });
+        // Filter appointments for the selected month and year
+        const filteredAppointments = appointmentDocs.docs.filter((appointmentDoc) => {
+            const data = appointmentDoc.data();
+            const appointmentDate = new Date(data.date); // Assuming date is in a valid format
+            return (
+                appointmentDate.getMonth() + 1 === selectedMonth &&
+                appointmentDate.getFullYear() === selectedYear
+            );
+        });
 
-            // Fetch patient names for the filtered appointments
-            monthlyAppointments = await Promise.all(filteredAppointments.map(async (appointmentDoc) => {
+        // Fetch patient names for the filtered appointments
+        monthlyAppointments = await Promise.all(
+            filteredAppointments.map(async (appointmentDoc) => {
                 const appointmentData = appointmentDoc.data();
                 const patientId = appointmentData.patientId;
 
-                const patientDocRef = doc(db, "patientProfiles", patientId);
-                const patientDocSnap = await getDoc(patientDocRef);
-                const patientData = patientDocSnap.data() as PatientData; // Cast to PatientData
+                // Handle missing or invalid patientId
+                if (!patientId) {
+                    console.warn(`Missing patientId for appointment: ${appointmentDoc.id}`);
+                    return {
+                        id: appointmentDoc.id,
+                        ...appointmentData,
+                        patientName: "Unknown Patient", // Default to "Unknown Patient"
+                    };
+                }
 
-                const patientName = patientData ? `${patientData.name} ${patientData.lastName}` : "Unknown Patient";
+                try {
+                    const patientDocRef = doc(db, "patientProfiles", patientId);
+                    const patientDocSnap = await getDoc(patientDocRef);
 
-                return { id: appointmentDoc.id, ...appointmentData, patientName }; // Include patient name
-            }));
+                    if (!patientDocSnap.exists()) {
+                        console.warn(`No patient document found for ID: ${patientId}`);
+                        return {
+                            id: appointmentDoc.id,
+                            ...appointmentData,
+                            patientName: "Unknown Patient", // Default to "Unknown Patient"
+                        };
+                    }
 
-        } catch (error) {
-            console.error("Error fetching monthly appointments:", error);
-        }
-        openTableHandler('monthlyAppointments'); // Open monthly appointments table
+                    const patientData = patientDocSnap.data();
+                    const patientName = `${patientData.name || "Unknown"} ${patientData.lastName || "Patient"}`;
+
+                    return {
+                        id: appointmentDoc.id,
+                        ...appointmentData,
+                        patientName, // Include patient name
+                    };
+                } catch (innerError) {
+                    console.error(`Error fetching patient data for ID ${patientId}:`, innerError);
+                    return {
+                        id: appointmentDoc.id,
+                        ...appointmentData,
+                        patientName: "Error Fetching Patient", // Fallback in case of errors
+                    };
+                }
+            })
+        );
+
+        console.log("Monthly Appointments:", monthlyAppointments);
+    } catch (error) {
+        console.error("Error fetching monthly appointments:", error);
     }
+
+    openTableHandler("monthlyAppointments"); // Open monthly appointments table
+}
 
 async function fetchAppointmentsData() {
     const appointmentsCollection = collection(db, "appointments");
