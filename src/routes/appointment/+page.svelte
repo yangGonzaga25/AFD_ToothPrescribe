@@ -31,7 +31,6 @@ let remarks: string = '';
 let cancelReason: string = '';
 let cancellationStatus: string = 'Pending'; // Default cancellation status
 let showModal: boolean = false; // Control to show/hide the modal
-let patientName = 'Patient';  // Default value
 
   // Define types
   type Appointment = {
@@ -856,13 +855,14 @@ function showAppointmentModal(appointment: Appointment) {
   subServices = appointment.subServices;
   cancelReason = appointment.cancelReason;
   cancellationStatus = appointment.cancellationStatus;
-  selectedAppointment = appointment; 
   showModal = true;
+
+  // Ensure that patientId is assigned correctly
+  selectedAppointment = appointment; // Ensure this is set correctly
 
   // Load available slots when the modal is shown
   loadAvailableSlots();
 }
-
 
 // Function to close the modal and reset the form values
 function hideAppointmentModal() {
@@ -879,7 +879,6 @@ function hideAppointmentModal() {
   availableSlots = []; // Clear available slots when hiding the modal
 }
 
-// Function to handle adding a new appointment (based on Appointment type)
 // Function to handle adding a new appointment (without updating the patient profile)
 async function addNewAppointment() {
   // Ensure that the required fields are valid before proceeding
@@ -915,7 +914,19 @@ async function addNewAppointment() {
   }
 
   // Ensure the patient profile exists (via user-side function or check)
-  const patientProfile = patientProfiles.find(profile => profile.id === selectedAppointment?.patientId);
+  const patientId = selectedAppointment?.patientId;
+
+  if (!patientId) {
+    Swal.fire({
+      icon: "error",
+      title: "Patient Not Selected",
+      text: "Please select a patient before scheduling the appointment.",
+    });
+    return; // Exit if no patient profile is found
+  }
+
+  // Check if the patient profile exists in the list (if applicable)
+  const patientProfile = patientProfiles.find(profile => profile.id === patientId);
 
   if (!patientProfile) {
     Swal.fire({
@@ -937,7 +948,7 @@ async function addNewAppointment() {
     cancelReason: cancelReason || '', // Fallback to empty string if not set
     cancellationStatus: cancellationStatus || 'Pending', // Default to 'Pending'
     status: 'Scheduled', // Default status for new appointments
-    patientId: selectedAppointment?.patientId || '', // Ensure patientId is included
+    patientId: patientId, // Ensure patientId is included
   };
 
   // Log and save the new appointment
@@ -945,7 +956,7 @@ async function addNewAppointment() {
 
   try {
     await addDoc(collection(db, "appointments"), newAppointment);
-    
+
     Swal.fire({
       icon: "success",
       title: "Appointment Added",
@@ -962,6 +973,7 @@ async function addNewAppointment() {
     });
   }
 }
+
 
 // Function to validate the form data before adding an appointment
 function validateAppointmentData() {
@@ -1285,7 +1297,7 @@ function validateAppointmentData() {
         <!-- Display Appointments if any -->
         {#if filterAppointments(currentView).length > 0}
           {#each filterAppointments(currentView) as appointment}
-            <article class="appointment-card">
+            <article class="appointment-card1">
               <section class="appointment-details">
                 <!-- Patient Info Section -->
                 <p class="appointment-patient">
@@ -1369,18 +1381,26 @@ function validateAppointmentData() {
     </div>
   </div>
   <!-- Modal -->
+ 
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
   {#if showModal}
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div class="modal-overlay-new-appointment" on:click={hideAppointmentModal}>
     <div class="modal-content-new-appointment" on:click|stopPropagation>
-      <h2>Add New Appointment for 
-        {#each patientProfiles as profile (profile.id)}
-          {#if profile.id === selectedAppointment?.patientId}
-            <strong>{profile.name} {profile.lastName}</strong> ({profile.age} years old)
-          {/if}
-        {/each}
-      </h2>
+      <h3>
+        Add Follow-up Appointment for 
+        {selectedAppointment 
+          ? (() => {
+              const patientProfile = patientProfiles.find(profile => profile.id === selectedAppointment?.patientId);
+              return patientProfile ? `${patientProfile.name} ${patientProfile.lastName}` : 'Patient';
+            })() 
+          : 'Patient'}
+      </h3>
+
+      <!-- Modal form or other content here -->
+   
      
   
       <form on:submit|preventDefault={addNewAppointment}>
@@ -1895,7 +1915,7 @@ function validateAppointmentData() {
       font-size: 0.75rem;
     }
   }
-  .appointment-card {
+  .appointment-card1 {
   border: 1px solid #b0bec5; 
   border-radius: 10px;
   padding: 20px;
@@ -1974,9 +1994,10 @@ function validateAppointmentData() {
 }
 
 /* Modal Header */
-.modal-content-new-appointment h2 {
+.modal-content-new-appointment h3 {
   font-size: 24px;
   color: #333;
+  
   margin-bottom: 10px;
   text-align: center;
 }
@@ -2044,25 +2065,6 @@ function validateAppointmentData() {
   100% {
     opacity: 1;
   }
-}
-.modal-content-new-appointment h2 {
-    font-size: 18px;
-    color: #333;
-    font-weight: 600;
-    margin-bottom: 20px;
-    padding: 10px;
-    border-radius: 5px;
-    text-align: center;
-}
-
-.modal-content-new-appointment h2 strong {
-    color: #007BFF; /* Highlight the patient's name with a blue color */
-    font-weight: 700;
-}
-
-.modal-content-new-appointment h2 em {
-    color: #888; /* Optional: Use a lighter color for the age */
-    font-style: italic;
 }
 
 
