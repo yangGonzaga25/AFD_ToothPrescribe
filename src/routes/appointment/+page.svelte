@@ -12,6 +12,25 @@
   const db = getFirestore(app);
   import Swal from 'sweetalert2';
 
+  const morningSlots = [
+  "8:00 AM", "8:30 AM", "9:00 AM", "9:30 AM", "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM",
+];
+const afternoonSlots = [
+  "1:00 PM", "1:30 PM", "2:00 PM", "2:30 PM", "3:00 PM", "3:30 PM", "4:00 PM", "4:30 PM",
+];
+
+let availableSlots = [...morningSlots, ...afternoonSlots];
+ // Array to store available time slots
+let date: string = ''; // Date selected by the user
+let time: string = ''; // Time selected by the user
+let newTime: string = ''; // New time slot for the appointment
+let appointmentId: string = ''; // Appointment ID if modifying an existing one
+let appointmentService: string = '';
+let subServices: string = '';
+let remarks: string = '';
+let cancelReason: string = '';
+let cancellationStatus: string = 'Pending'; // Default cancellation status
+let showModal: boolean = false; // Control to show/hide the modal
 
   // Define types
   type Appointment = {
@@ -88,6 +107,7 @@ interface PrescriptionMedicine {
 
 let prescriptionMedicines: PrescriptionMedicine[] = []; // Update the type of prescriptionMedicines
 let prescriptionAdded = false;
+
 // Define 'today' as the current date
 const today = new Date();
 
@@ -273,7 +293,9 @@ const filterAppointments = (view: 'today' | 'week' | 'month') => {
   const now = new Date();
   return appointments.filter(appt => {
     const apptDate = new Date(appt.date);
-    if (appt.status !== 'Accepted' && appt.status !== 'Rescheduled') return false; // Include accepted or rescheduled appointments
+    // Include accepted, rescheduled, or completed appointments
+    if (!['Accepted', 'Rescheduled', 'Completed'].includes(appt.status)) return false;
+
     if (view === 'today') {
       return apptDate.toDateString() === now.toDateString();
     } else if (view === 'week') {
@@ -287,6 +309,7 @@ const filterAppointments = (view: 'today' | 'week' | 'month') => {
     }
   });
 };
+
 
 const openModal = (appointmentId: string) => {
   // Find the selected appointment by its ID
@@ -469,7 +492,7 @@ const submitPrescription = async () => {
 
         await addDoc(collection(db, "prescriptions"), prescription);
 
-        console.log("Prescription successfully saved to Firestore.");
+        console.log("Prescription successfully Added!");
 
         // Mark prescription as added
         prescriptionAdded = true; // Disable the button
@@ -482,7 +505,7 @@ const submitPrescription = async () => {
         // Show success alert
         await Swal.fire({
           title: 'Success!',
-          text: 'Prescription successfully saved to Firestore.',
+          text: 'Prescription successfully Added!',
           icon: 'success',
         });
       } else {
@@ -515,24 +538,10 @@ const submitPrescription = async () => {
     }
   };
 
-
-
-
 const closeModal = () => {
     isModalOpen = false; // Close the modal
   };
-  function goToNextSection() {
-  if (currentSection < 2) {
-    currentSection += 1;
-  }
-}
-
-function goToPreviousSection() {
-  if (currentSection > 0) {
-    currentSection -= 1;
-  }
-}
-
+ 
   // Sidebar toggle
   let isCollapsed = false;
   function toggleSidebar() {
@@ -810,6 +819,159 @@ async function rejectReschedule(appointmentId: string, previousDate: string | un
   }
 }
 
+// Function to load available time slots for the selected date
+async function loadAvailableSlots() {
+  const selectedDate = date; // Get the date value from the form
+  
+  // Ensure selectedDate is valid
+  if (!selectedDate) {
+    console.error("Selected date is invalid.");
+    return;
+  }
+
+  // Query the database to check which slots are already booked for the selected date
+  const q = query(
+    collection(db, "appointments"),
+    where("date", "==", selectedDate),
+    where("cancellationStatus", "==", "") // Ensure it excludes cancelled appointments
+  );
+
+  const querySnapshot = await getDocs(q);
+  const bookedSlots = querySnapshot.docs.map((doc) => doc.data().time);
+
+  // Filter out the booked slots from the available slots
+  availableSlots = [...morningSlots, ...afternoonSlots].filter(
+    (slot) => !bookedSlots.includes(slot)
+  );
+}
+
+// Function to show the appointment modal (to view and modify details)
+function showAppointmentModal(appointment: Appointment) {
+  appointmentId = appointment.id;
+  appointmentService = appointment.service;
+  date = appointment.date;
+  time = appointment.time;
+  remarks = appointment.remarks;
+  subServices = appointment.subServices;
+  cancelReason = appointment.cancelReason;
+  cancellationStatus = appointment.cancellationStatus;
+  showModal = true;
+
+  // Load available slots when the modal is shown
+  loadAvailableSlots();
+}
+
+// Function to close the modal and reset the form values
+function hideAppointmentModal() {
+  showModal = false;
+  // Reset form values to clear the modal
+  appointmentId = '';
+  appointmentService = '';
+  date = '';
+  time = '';
+  remarks = '';
+  subServices = '';
+  cancelReason = '';
+  cancellationStatus = '';
+  availableSlots = []; // Clear available slots when hiding the modal
+}
+
+// Function to handle adding a new appointment (based on Appointment type)
+// Function to handle adding a new appointment (without updating the patient profile)
+async function addNewAppointment() {
+  // Ensure that the required fields are valid before proceeding
+  if (!newTime || !date || !appointmentService) {
+    Swal.fire({
+      icon: "warning",
+      title: "Missing Required Information",
+      text: "Please ensure that all required fields are filled out (Date, Time, Service).",
+    });
+    return; // Exit if any required field is missing
+  }
+
+  // Check if the time slot is already booked before saving
+  const q = query(
+    collection(db, "appointments"),
+    where("date", "==", date),
+    where("time", "==", newTime),
+    where("cancellationStatus", "==", "")
+  );
+
+  const querySnapshot = await getDocs(q);
+  const existingAppointment = querySnapshot.docs.find(
+    (doc) => doc.data().status === "Accepted" || doc.data().status === "Pending"
+  );
+
+  if (existingAppointment) {
+    Swal.fire({
+      icon: "info",
+      title: "Time Slot Unavailable",
+      text: "This time slot is already booked or pending. Please choose a different time.",
+    });
+    return; // Exit if the slot is already booked
+  }
+
+  // Ensure the patient profile exists (via user-side function or check)
+  const patientProfile = patientProfiles.find(profile => profile.id === selectedAppointment?.patientId);
+
+  if (!patientProfile) {
+    Swal.fire({
+      icon: "error",
+      title: "Profile Not Found",
+      text: "The patient profile doesn't exist. Please ensure the patient has a profile before proceeding.",
+    });
+    return; // Exit if no patient profile is found
+  }
+
+  // If available, save the new appointment to the database
+  const newAppointment: Appointment = {
+    id: appointmentId || '', // Fallback to an empty string if not set
+    service: appointmentService || '', // Fallback to empty string if not set
+    date: date || '', // Fallback to empty string if not set
+    time: newTime || '', // Fallback to empty string if not set
+    remarks: remarks || '', // Fallback to empty string if not set
+    subServices: subServices || '', // Fallback to empty string if not set
+    cancelReason: cancelReason || '', // Fallback to empty string if not set
+    cancellationStatus: cancellationStatus || 'Pending', // Default to 'Pending'
+    status: 'Scheduled', // Default status for new appointments
+    patientId: selectedAppointment?.patientId || '', // Ensure patientId is included
+  };
+
+  // Log and save the new appointment
+  console.log("Adding appointment:", newAppointment);
+
+  try {
+    await addDoc(collection(db, "appointments"), newAppointment);
+    
+    Swal.fire({
+      icon: "success",
+      title: "Appointment Added",
+      text: "Your appointment has been successfully scheduled.",
+    });
+
+    hideAppointmentModal(); // Close the modal after adding the appointment
+  } catch (error) {
+    console.error("Error adding appointment:", error);
+    Swal.fire({
+      icon: "error",
+      title: "Error",
+      text: "There was an issue adding the appointment. Please try again.",
+    });
+  }
+}
+
+// Function to validate the form data before adding an appointment
+function validateAppointmentData() {
+  if (!appointmentService || !newTime || !date) {
+    Swal.fire({
+      icon: "warning",
+      title: "Missing Required Fields",
+      text: "Please fill in all required fields (Date, Time, Service).",
+    });
+    return false;
+  }
+  return true;
+}
 
 </script>
 
@@ -1088,118 +1250,192 @@ async function rejectReschedule(appointmentId: string, previousDate: string | un
   </div>
   
   <div class="container">
-    <div class="appointments-section">
-      <h2>Accepted Appointments</h2>
-  
-      <div class="tabs">
-        <button 
-          type="button"
-          class="tab-item {currentView === 'today' ? 'active' : ''}" 
-          on:click={() => currentView = 'today'}>
-          Today
-        </button>
-        <button 
-          type="button"
-          class="tab-item {currentView === 'week' ? 'active' : ''}" 
-          on:click={() => currentView = 'week'}>
-          This Week
-        </button>
-        <button 
-          type="button"
-          class="tab-item {currentView === 'month' ? 'active' : ''}" 
-          on:click={() => currentView = 'month'}>
-          This Month
-        </button>
-      </div>
-  
-      {#if filterAppointments(currentView).length > 0}
-      {#each filterAppointments(currentView) as appointment}
-        <article class="appointment-card">
-          <section class="appointment-details">
-            
-            <!-- Patient Name Section -->
-            <p class="appointment-patient">
-              {#each patientProfiles as profile (profile.id)}
-                {#if profile.id === appointment.patientId}
-                  <strong>{profile.name} {profile.lastName}</strong> ({profile.age} years old)
-                {/if}
-              {/each}
-            </p>
+    <div class="container">
+      <div class="appointments-section">
+        <h2>Accepted Appointments</h2>
     
-            <!-- Date & Time Section -->
-            <div style="margin-bottom: 10px;">
-              <p style="margin: 5px 0 0; font-size: 0.95em; color: #555;">
-                <strong>{new Date(appointment.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</strong>
-                <span> | {appointment.time}</span>
-              </p>
-            </div>
-    
-           <!-- Service Section -->
-<p class="appointment-service">Service: {appointment.service}</p>
-
-{#if appointment.subServices && appointment.subServices.length > 0}
-  <p class="appointment-service">Sub-services: {appointment.subServices.join(', ')}</p>
-{/if}
-
-    
-            <!-- Remarks Section -->
-            <div class="remarks-container">
-              <label for="remarks-{appointment.id}" class="remarks-label">Remarks:</label>
-              <input
-                type="text"
-                id="remarks-{appointment.id}"
-                class="remarks-input"
-                bind:value={appointment.remarks}
-                placeholder="Enter remarks here"
-                aria-label="Enter remarks for {appointment.date} at {appointment.time}"
-              />
-            </div>
-            
-          </section>
-        </article>
-    
-        <!-- Appointment Buttons Section -->
-        <div class="appointment-buttons">
+        <!-- Tabs for Filtering -->
+        <div class="tabs">
           <button
-            on:click={() => openModal(appointment.id)}
-            class="bg-green-100 text-green-500 px-3 py-1 rounded"
-            disabled={prescriptionAdded}
+            type="button"
+            class="tab-item {currentView === 'today' ? 'active' : ''}"
+            on:click={() => currentView = 'today'}
           >
-            Add Prescription
+            Today
           </button>
           <button
-            class="bg-blue-100"
-            on:click={() => handleCompletedAppointment(appointment.id, 'Completed', appointment.remarks || '')}
+            type="button"
+            class="tab-item {currentView === 'week' ? 'active' : ''}"
+            on:click={() => currentView = 'week'}
           >
-            Completed
+            This Week
           </button>
           <button
-            class="bg-red-100"
-            on:click={() => handleCompletedAppointment(appointment.id, 'Missed', appointment.remarks || '')}
+            type="button"
+            class="tab-item {currentView === 'month' ? 'active' : ''}"
+            on:click={() => currentView = 'month'}
           >
-            Missed
+            This Month
           </button>
         </div>
     
+        <!-- Display Appointments if any -->
+        {#if filterAppointments(currentView).length > 0}
+          {#each filterAppointments(currentView) as appointment}
+            <article class="appointment-card">
+              <section class="appointment-details">
+                <!-- Patient Info Section -->
+                <p class="appointment-patient">
+                  {#each patientProfiles as profile (profile.id)}
+                    {#if profile.id === appointment.patientId}
+                      <strong>{profile.name} {profile.lastName}</strong> ({profile.age} years old)
+                    {/if}
+                  {/each}
+                </p>
     
+                <!-- Date & Time Section -->
+                <div style="margin-bottom: 10px;">
+                  <p style="margin: 5px 0 0; font-size: 0.95em; color: #555;">
+                    <strong>{new Date(appointment.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</strong>
+                    <span> | {appointment.time}</span>
+                  </p>
+                </div>
     
- 
-{/each}
-{:else}
-<div class="no-appointments">
-  <p>No appointments for the selected period.</p>
-</div>
-{/if}
-
+                <!-- Service Information -->
+                <p class="appointment-service">Service: {appointment.service}</p>
+                {#if appointment.subServices && appointment.subServices.length > 0}
+                  <p class="appointment-service">Sub-services: {appointment.subServices.join(', ')}</p>
+                {/if}
+    
+                <!-- Remarks Input -->
+                <div class="remarks-container">
+                  <label for="remarks-{appointment.id}" class="remarks-label">Remarks:</label>
+                  <input
+                    type="text"
+                    id="remarks-{appointment.id}"
+                    class="remarks-input"
+                    bind:value={appointment.remarks}
+                    placeholder="Enter remarks here"
+                    aria-label="Enter remarks for {appointment.date} at {appointment.time}"
+                  />
+                </div>
+              </section>
+            </article>
+    
+            <!-- Action Buttons (Add Prescription, Completed, Missed) -->
+            <div class="appointment-buttons">
+              {#if appointment.status === 'Completed'}
+                <!-- Ipakita lang ang button na "Add Appointment" kung 'Completed' ang status -->
+                <div class="add-appointment-button">
+                  <button class="bg-green-500 text-white px-4 py-2 rounded" on:click={() => showAppointmentModal(appointment)}>
+                    Add Appointment
+                  </button>
+                </div>
+              {:else}
+                <!-- Show these buttons if the status is not 'Completed' -->
+                <button
+                  on:click={() => openModal(appointment.id)}
+                  class="bg-green-100 text-green-500 px-3 py-1 rounded"
+                  disabled={prescriptionAdded}
+                >
+                  Add Prescription
+                </button>
+                <button
+                  class="bg-blue-100"
+                  on:click={() => handleCompletedAppointment(appointment.id, 'Completed', appointment.remarks || '')}
+                >
+                  Completed
+                </button>
+                <button
+                  class="bg-red-100"
+                  on:click={() => handleCompletedAppointment(appointment.id, 'Missed', appointment.remarks || '')}
+                >
+                  Missed
+                </button>
+              {/if}
+            </div>
+            
+    
+          {/each}
+        {:else}
+          <div class="no-appointments">
+            <p>No appointments for the selected period.</p>
+          </div>
+        {/if}
+      </div>
     </div>
   </div>
+  <!-- Modal -->
+  {#if showModal}
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div class="modal-overlay-new-appointment" on:click={hideAppointmentModal}>
+    <div class="modal-content-new-appointment" on:click|stopPropagation>
+      <h2>Add New Appointment</h2>
+     
+  
+      <form on:submit|preventDefault={addNewAppointment}>
+        <label for="date">Date:</label>
+        <input 
+          type="date" 
+          id="date" 
+          name="date" 
+          bind:value={date} 
+          required 
+          on:change={loadAvailableSlots} 
+          min={new Date().toISOString().split('T')[0]}
+        />
+     
+      
+        
+        <label for="newTime">Select a new time:</label>
+        <select id="newTime" bind:value={newTime} required>
+          <option value="" disabled selected>Select a time</option>
+          {#each availableSlots as slot}
+            <option value={slot}>{slot}</option>
+          {/each}
+        </select>
+        
+  
+        <label for="service">Service:</label>
+        <input 
+          type="text" 
+          id="service" 
+          name="service" 
+          bind:value={appointmentService} 
+          required 
+        />
+  
+        <label for="subServices">Sub-services:</label>
+        <input 
+          type="text" 
+          id="subServices" 
+          name="subServices" 
+          bind:value={subServices} 
+          placeholder="Enter sub-services here"
+        />
+  
+        <label for="remarks">Remarks:</label>
+        <input 
+          type="text" 
+          id="remarks" 
+          name="remarks" 
+          bind:value={remarks} 
+          placeholder="Enter remarks here"
+        />
+        
+        <button type="submit" class="submit-btn">Add Appointment</button>
+        <button type="button" class="cancel-btn" on:click={hideAppointmentModal}>Cancel</button>
+      </form>
+    </div>
+  </div>
+  {/if}
+  
   
 <!-- Modal with Overlay (Appears when isModalOpen is true) -->
 {#if isModalOpen}
-  <!-- svelte-ignore a11y_click_events_have_key_events -->
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="modal-overlay" on:click={closeModal} role="dialog" aria-labelledby="modal-title" aria-hidden={!isModalOpen}>
-    <div class="modal-content" on:click|stopPropagation tabindex="-1">
+  <div class="modal-overlay" role="dialog" aria-labelledby="modal-title" aria-hidden={!isModalOpen}>
+    <div class="modal-content" tabindex="-1">
       <button class="absolute top-2 right-2 text-white text-xl" on:click={closeModal} aria-label="Close Modal"></button>
       <h2 id="modal-title" class="text-lg font-bold mb-4">
         Add Prescription for 
@@ -1699,6 +1935,107 @@ async function rejectReschedule(appointmentId: string, previousDate: string | un
   margin-top: 10px; /* Magdagdag ng kaunting space sa ibabaw ng buttons */
 }
 
+/* Modal Overlay - Semi-transparent background */
+/* Modal Overlay for New Appointment */
+.modal-overlay-new-appointment  {
+  position: fixed; /* Makes it overlay on the entire screen */
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999; /* Ensure modal is on top */
+  overflow: hidden; /* Prevents any scrolling */
+  pointer-events: auto; /* Prevent interaction with background */
+}
+
+/* Modal Content Box for New Appointment */
+.modal-content-new-appointment {
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  width: 80%;
+  max-width: 500px;
+  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+  animation: fadeIn 0.3s ease;
+  position: relative; /* Prevents affecting other elements */
+}
+
+/* Modal Header */
+.modal-content-new-appointment h2 {
+  font-size: 24px;
+  color: #333;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+/* Modal Description */
+
+/* Form Labels */
+.modal-content-new-appointment label {
+  display: block;
+  font-size: 14px;
+  font-weight: bold;
+  color: #444;
+  margin-bottom: 6px;
+}
+
+/* Form Inputs */
+.modal-content-new-appointment input {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 16px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+  color: #333;
+}
+
+/* Button Styling */
+.submit-btn,
+.cancel-btn {
+  padding: 10px 15px;
+  font-size: 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  width: 48%;
+  margin-top: 10px;
+}
+
+/* Submit Button (Green) */
+.submit-btn {
+  background-color: #4caf50;
+  color: #fff;
+}
+
+/* Cancel Button (Red) */
+.cancel-btn {
+  background-color: #f44336;
+  color: #fff;
+}
+
+/* Button Hover Effects */
+.submit-btn:hover {
+  background-color: #45a049;
+}
+
+.cancel-btn:hover {
+  background-color: #e53935;
+}
+
+/* Fade-in Animation */
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
 
 
 </style>
