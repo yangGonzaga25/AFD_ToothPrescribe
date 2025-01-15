@@ -12,7 +12,7 @@
     const db = getFirestore(app);
     import * as XLSX from 'xlsx';
     import { jsPDF } from 'jspdf'; // Import jsPDF
-import autoTable from 'jspdf-autotable'; // Import autoTable
+    import autoTable from 'jspdf-autotable'; // Import autoTable
     
 const currentYear = new Date().getFullYear();
 const years = Array.from({ length: 10 }, (_, i) => currentYear - i);
@@ -691,12 +691,29 @@ async function fetchPrescriptionsData() {
             const appointmentData = docSnapshot.data();
             const patientId = appointmentData.patientId;
 
-            const patientDocRef = doc(db, "patientProfiles", patientId);
-            const patientDocSnap = await getDoc(patientDocRef);
-            const patientData = patientDocSnap.data();
-            const patientName = patientData ? `${patientData.name} ${patientData.lastName}` : "Unknown Patient";
+            // Check if patientId exists before creating a document reference
+            if (!patientId) {
+                console.warn(`Missing patientId for appointment: ${docSnapshot.id}`);
+                return { id: docSnapshot.id, ...appointmentData, patientName: "Unknown Patient" };
+            }
 
-            return { id: docSnapshot.id, ...appointmentData, patientName };
+            try {
+                const patientDocRef = doc(db, "patientProfiles", patientId);
+                const patientDocSnap = await getDoc(patientDocRef);
+
+                if (!patientDocSnap.exists()) {
+                    console.warn(`No patient found with ID: ${patientId}`);
+                    return { id: docSnapshot.id, ...appointmentData, patientName: "Unknown Patient" };
+                }
+
+                const patientData = patientDocSnap.data();
+                const patientName = `${patientData.name || "Unknown"} ${patientData.lastName || "Patient"}`;
+
+                return { id: docSnapshot.id, ...appointmentData, patientName };
+            } catch (innerError) {
+                console.error(`Error fetching patient data for ID ${patientId}:`, innerError);
+                return { id: docSnapshot.id, ...appointmentData, patientName: "Error Fetching Patient" };
+            }
         }));
 
         openTableHandler('appointments'); // Open appointments table after fetching
