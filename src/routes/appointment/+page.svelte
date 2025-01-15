@@ -31,6 +31,7 @@ let remarks: string = '';
 let cancelReason: string = '';
 let cancellationStatus: string = 'Pending'; // Default cancellation status
 let showModal: boolean = false; // Control to show/hide the modal
+let patientName = 'Patient';  // Default value
 
   // Define types
   type Appointment = {
@@ -855,11 +856,13 @@ function showAppointmentModal(appointment: Appointment) {
   subServices = appointment.subServices;
   cancelReason = appointment.cancelReason;
   cancellationStatus = appointment.cancellationStatus;
+  selectedAppointment = appointment; 
   showModal = true;
 
   // Load available slots when the modal is shown
   loadAvailableSlots();
 }
+
 
 // Function to close the modal and reset the form values
 function hideAppointmentModal() {
@@ -1371,7 +1374,13 @@ function validateAppointmentData() {
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div class="modal-overlay-new-appointment" on:click={hideAppointmentModal}>
     <div class="modal-content-new-appointment" on:click|stopPropagation>
-      <h2>Add New Appointment</h2>
+      <h2>Add New Appointment for 
+        {#each patientProfiles as profile (profile.id)}
+          {#if profile.id === selectedAppointment?.patientId}
+            <strong>{profile.name} {profile.lastName}</strong> ({profile.age} years old)
+          {/if}
+        {/each}
+      </h2>
      
   
       <form on:submit|preventDefault={addNewAppointment}>
@@ -2035,6 +2044,25 @@ function validateAppointmentData() {
   100% {
     opacity: 1;
   }
+}
+.modal-content-new-appointment h2 {
+    font-size: 18px;
+    color: #333;
+    font-weight: 600;
+    margin-bottom: 20px;
+    padding: 10px;
+    border-radius: 5px;
+    text-align: center;
+}
+
+.modal-content-new-appointment h2 strong {
+    color: #007BFF; /* Highlight the patient's name with a blue color */
+    font-weight: 700;
+}
+
+.modal-content-new-appointment h2 em {
+    color: #888; /* Optional: Use a lighter color for the age */
+    font-style: italic;
 }
 
 
