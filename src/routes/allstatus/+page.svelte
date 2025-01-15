@@ -153,7 +153,7 @@
                 </div>
             </div>
            <!-- Back Button -->
-           <a href="/appointment" class="back-button flex items-center border p-1 rounded-md text-blue-500 hover:text-blue-700 mb-2 inline-block w-1/12">
+           <a href="/appointment" class="back-button flex items-center border p-1 rounded-md text-blue-500 hover:text-blue-700 mb-2 w-1/12">
 
             <!-- Back Icon (SVG) -->
             <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">

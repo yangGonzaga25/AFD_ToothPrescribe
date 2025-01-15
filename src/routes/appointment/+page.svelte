@@ -294,7 +294,7 @@ const filterAppointments = (view: 'today' | 'week' | 'month') => {
   return appointments.filter(appt => {
     const apptDate = new Date(appt.date);
     // Include accepted, rescheduled, or completed appointments
-    if (!['Accepted', 'Rescheduled', 'Completed'].includes(appt.status)) return false;
+    if (!['Accepted', 'Rescheduled', 'Completed','Scheduled'].includes(appt.status)) return false;
 
     if (view === 'today') {
       return apptDate.toDateString() === now.toDateString();
@@ -880,6 +880,7 @@ function hideAppointmentModal() {
 }
 
 // Function to handle adding a new appointment (without updating the patient profile)
+// Function to handle adding a new appointment (without updating the patient profile)
 async function addNewAppointment() {
   // Ensure that the required fields are valid before proceeding
   if (!newTime || !date || !appointmentService) {
@@ -957,10 +958,26 @@ async function addNewAppointment() {
   try {
     await addDoc(collection(db, "appointments"), newAppointment);
 
+    // Now that the new follow-up appointment has been added,
+    // Update the status of the selected appointment to "Completed: Need Follow-up"
+    if (selectedAppointment) {
+      const updatedAppointment = {
+        ...selectedAppointment,
+        status: "Completed: Need Follow-up", // Update status here
+      };
+
+      // Ensure selectedAppointment is not null before updating
+      if (selectedAppointment?.id) {
+        await updateDoc(doc(db, "appointments", selectedAppointment.id), {
+          status: updatedAppointment.status,
+        });
+      }
+    }
+
     Swal.fire({
       icon: "success",
       title: "Appointment Added",
-      text: "Your appointment has been successfully scheduled.",
+      text: "Your appointment has been successfully scheduled and the previous appointment status updated.",
     });
 
     hideAppointmentModal(); // Close the modal after adding the appointment
@@ -973,7 +990,6 @@ async function addNewAppointment() {
     });
   }
 }
-
 
 // Function to validate the form data before adding an appointment
 function validateAppointmentData() {
@@ -1452,6 +1468,7 @@ function validateAppointmentData() {
           bind:value={remarks} 
           placeholder="Enter remarks here"
         />
+        
         
         <button type="submit" class="submit-btn">Add Appointment</button>
         <button type="button" class="cancel-btn" on:click={hideAppointmentModal}>Cancel</button>
