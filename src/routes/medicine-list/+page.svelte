@@ -532,67 +532,59 @@ textarea:focus {
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
   width: 800px;
   max-width: 90%;
-  z-index: 1050; /* Ensures it appears above other content */
+  max-height: 80vh; /* Limits height to 80% of the viewport */
+  overflow-y: auto; /* Enables vertical scrolling if content is too long */
+  z-index: 1050;
 }
 
-.edit-popup-content {
-  display: flex;
-  flex-direction: row;
-  gap: 20px;
+/* Responsive Design */
+@media (max-width: 768px) {
+  .edit-popup {
+    width: 90%;
+    padding: 15px;
+    max-height: 90vh; /* Increases height limit for smaller screens */
+  }
+
+  .edit-popup-content {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .edit-popup .form-left,
+  .edit-popup .form-right {
+    flex: none;
+    width: 100%;
+  }
+
+  .edit-popup .image-preview {
+    max-height: 150px;
+  }
+
+  .edit-popup .cancel-button,
+  .edit-popup .confirm-button {
+    width: 100%;
+    padding: 10px;
+    text-align: center;
+  }
 }
 
-.landscape-layout {
-  align-items: flex-start;
+@media (max-width: 480px) {
+  .edit-popup {
+    width: 95%;
+    padding: 10px;
+  }
+
+  .edit-popup .image-preview {
+    max-height: 120px;
+  }
+
+  .edit-popup .cancel-button,
+  .edit-popup .confirm-button {
+    font-size: 14px;
+    padding: 8px;
+  }
 }
 
-.edit-popup .form-left {
-  flex: 2;
-}
-
-.edit-popup .form-right {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.edit-popup .image-preview {
-  width: 100%;
-  height: auto;
-  max-height: 200px;
-  object-fit: cover;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  margin-top: 10px;
-}
-
-.edit-popup .cancel-button {
-  background-color: #f44336;
-  color: white;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-}
-
-.edit-popup .cancel-button:hover {
-  background-color: #c23628;
-}
-
-.edit-popup .confirm-button {
-  background-color: #4caf50;
-  color: white;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-}
-
-.edit-popup .confirm-button:hover {
-  background-color: #388e3c;
-}
  
 /* In your CSS file */
 .custom-margin-top {
@@ -608,8 +600,9 @@ textarea:focus {
     <Sidebar {isCollapsed} {toggleSidebar} {logout} />
 
     <div class="container">
-      <h1 class="text-2xl font-semibold mb-4 custom-margin-top">Manage Medicines</h1>
-        <button class="add-button" on:click={togglePopup}>+Add Medicine</button>
+      <h1 class="text-2xl font-semibold mb-4 margin-top:10px">Manage Medicines</h1>
+      <button class="add-button" on:click={togglePopup} style="margin-top: 10px;">+Add Medicine</button>
+
 
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {#each medicines as medicine, index}
@@ -637,18 +630,20 @@ textarea:focus {
                 <span class="text-sm font-medium text-gray-700">Quantity: {medicine.quantity}</span>
         
                 <!-- Edit and Delete Buttons -->
+                <!-- svelte-ignore a11y_consider_explicit_label -->
                 <div class="flex gap-2">
+                  <!-- svelte-ignore a11y_consider_explicit_label -->
                   <button
                     class="px-3 py-1 text-sm text-white bg-blue-500 rounded hover:bg-blue-600 flex items-center gap-1"
                     on:click={() => openEditPopup(medicine)}
                   >
-                    <i class="fas fa-edit"></i> Edit
+                    <i class="fas fa-edit"></i>
                   </button>
                   <button
                     class="px-3 py-1 text-sm text-white bg-red-500 rounded hover:bg-red-600 flex items-center gap-1"
                     on:click={() => deleteMedicine(medicine)}
                   >
-                    <i class="fas fa-trash"></i> Delete
+                    <i class="fas fa-trash"></i> 
                   </button>
                 </div>
               </div>
@@ -716,9 +711,6 @@ textarea:focus {
         </div>
       {/if}
       
-
-      
-
         {#if showPopup}
             <div class="popup">
                 <div class="popup-content">
