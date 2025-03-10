@@ -333,6 +333,7 @@ async function deleteMedicine(medicine: Medicine) {
 </script>
 
 
+<!-- svelte-ignore css_unused_selector -->
 <style>
  
 
