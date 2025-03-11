@@ -1062,7 +1062,7 @@ async function createCompletedMissedLineChart() {
                     x: {
                         title: {
                             display: true,
-                            text: "Months",
+                            text: "",
                         },
                     },
                     y: {
@@ -1522,7 +1522,7 @@ tbody tr:hover {
     height: 280px; /* Limit the width to prevent it from stretching too much */
     margin: 0 auto; /* Center the chart horizontally */
     margin-top: -400px; /* Adjust this if needed */
-    margin-left: 490px; /* Add left margin to move it to the right */
+    margin-left: 530px; /* Add left margin to move it to the right */
     box-sizing: border-box;
 }
 
