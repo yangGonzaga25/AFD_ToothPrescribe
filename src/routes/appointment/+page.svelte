@@ -80,7 +80,7 @@ let pendingAppointmentsList: Appointment[] = [];
 let selectedAppointment: Appointment | null = null;
 let isModalOpen = false;
 
-let showReasonModal = false; // Controls the visibility of the reason modal
+let showReasonModal = false; 
 let rejectionReason = ''; // Stores the entered reason
 let pendingAppointmentId = ''; // Stores the ID of the appointment to be updated
 
