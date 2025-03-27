@@ -23,7 +23,7 @@
             showModal = true;
             loginMessage = "Login successful! Welcome, " + userCredential.user.email;
             // Redirect to the desired page
-            setTimeout(() => goto('/dashboard'), 1500); // Adjust the redirect path
+            setTimeout(() => goto('/dashboard'), 1500); 
         } catch (error) {
             // Handle login error
             showModal = true;

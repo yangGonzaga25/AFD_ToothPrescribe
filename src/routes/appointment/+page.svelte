@@ -1480,9 +1480,18 @@ function validateAppointmentData() {
   
 <!-- Modal with Overlay (Appears when isModalOpen is true) -->
 {#if isModalOpen}
-  <div class="modal-overlay" role="dialog" aria-labelledby="modal-title" aria-hidden={!isModalOpen}>
-    <div class="modal-content" tabindex="-1">
-      <button class="absolute top-2 right-2 text-white text-xl" on:click={closeModal} aria-label="Close Modal"></button>
+  <div class="modal-overlay fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center" role="dialog" aria-labelledby="modal-title" aria-hidden={!isModalOpen}>
+    <div class="modal-content bg-white p-6 rounded shadow-lg relative w-full max-w-md" tabindex="-1">
+      
+      <!-- Close Button -->
+      <button 
+        class="absolute top-2 right-2 text-gray-600 hover:text-gray-900 text-xl font-bold"
+        on:click={closeModal}
+        aria-label="Close Modal"
+      >
+        &times;
+      </button>
+
       <h2 id="modal-title" class="text-lg font-bold mb-4">
         Add Prescription for 
         {selectedAppointment 
@@ -1548,11 +1557,8 @@ function validateAppointmentData() {
           type="button"
           class="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500"
           on:click={() => {
-            // Add both selected and manual medicines before submitting
             addSelectedMedicine();
             addManualMedicine();
-
-            // Submit the prescription after adding medicines
             submitPrescription();
           }}
         >
@@ -1562,6 +1568,7 @@ function validateAppointmentData() {
     </div>
   </div>
 {/if}
+
 
 
 <style>
