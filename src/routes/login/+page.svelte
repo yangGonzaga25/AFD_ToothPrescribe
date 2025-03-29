@@ -16,7 +16,29 @@
     let password = '';
     let loginMessage = ''; // Message for success or error
     
+    function isValidEmail(email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+    }
+
+    function isValidPassword(password) {
+        const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/; // At least 8 chars, 1 letter, 1 number
+        return passwordRegex.test(password);
+    }
+
     async function handleLogin() {
+        // if (!isValidEmail(email)) {
+        //    showModal = true;
+        //    loginMessage = "Invalid email format. Please enter a valid email.";
+        //    return;
+        // }
+        
+        // if (!isValidPassword(password)) {
+        //    showModal = true;
+        //     loginMessage = "Password must be at least 8 characters long and include a letter and a number.";
+        //    return;
+        // }
+
         try {
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
             // Login successful
