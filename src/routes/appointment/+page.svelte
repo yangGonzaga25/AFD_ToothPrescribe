@@ -12,6 +12,76 @@
   const db = getFirestore(app);
   import Swal from 'sweetalert2';
 
+  // Dental Assessment Form State
+  let isDentalFormOpen = false;
+  let isMobile = false;
+  
+  // Form data for dental assessment
+  let dentalFormData = {
+    childName: '',
+    dateOfBirth: '',
+    gender: '',
+    address: '',
+    phone: '',
+    dentalNeeds: {
+      cleaning: false,
+      exam: false,
+      fluorideTreatment: false,
+      sealantAdministration: false,
+      noProblemsNoted: false
+    },
+    treatmentRequired: {
+      restoration: false,
+      pulpTherapy: false,
+      extraction: false,
+      other: false,
+      otherDetails: ''
+    },
+  missingTooth: 0,
+  decayedTooth: 0,
+  filledTooth: 0,
+  
+  };
+  
+  // Function to toggle dental assessment modal/drawer
+  function toggleDentalForm() {
+    isDentalFormOpen = !isDentalFormOpen;
+  }
+  
+  // Function to close dental assessment modal/drawer
+  function closeDentalForm() {
+    isDentalFormOpen = false;
+  }
+  
+  // Function to handle dental form submission
+  async function handleDentalFormSubmit() {
+  console.log('Dental form submitted:', dentalFormData);
+  
+  // Update the appointment's assessment status
+  if (selectedAppointment) {
+    const appointmentIndex = appointments.findIndex(app => app.id === selectedAppointment!.id);
+    if (appointmentIndex !== -1) {
+      appointments[appointmentIndex].assessmentSubmitted = true; // Mark as assessed
+      appointments[appointmentIndex].assessmentData = dentalFormData; // Store the submitted assessment data
+
+      // Update Firestore with the assessment data
+      const appointmentRef = doc(db, 'appointments', selectedAppointment.id);
+      await updateDoc(appointmentRef, {
+        assessmentSubmitted: true,
+        assessmentData: dentalFormData,
+      });
+    }
+  }
+
+  closeDentalForm();
+  // Here you would typically send the data to your backend
+  Swal.fire({
+    title: 'Success!',
+    text: 'Dental assessment form submitted successfully',
+    icon: 'success',
+  });
+}
+
   const morningSlots = [
   "8:00 AM", "8:30 AM", "9:00 AM", "9:30 AM", "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM",
 ];
@@ -44,6 +114,8 @@ let showModal: boolean = false; // Control to show/hide the modal
     status: string;
     patientId: string;
     service: string;
+    assessmentSubmitted?: boolean; 
+    assessmentData?: any;
     [key: string]: any;
   };
 
@@ -52,8 +124,11 @@ let showModal: boolean = false; // Control to show/hide the modal
   name: string;
   lastName: string;
   age: number;
-  // Add any other properties as needed
+  gender?: string;  // Make gender optional or required depending on your use case
+  address?: string;  // Optional address field
+  phone?: string;  // Optional phone field
 }
+
 interface Prescription {
     appointmentId: string;
     medicine: string;
@@ -121,16 +196,33 @@ prescriber = '';
 // svelte-ignore export_let_unused
 export let show = false;
 // Fetch appointments and profiles
-onMount(async () => {
-  try {
-    await fetchAppointments();
-    await fetchPatientProfiles();
-  } catch (error) {
-    console.error('Error fetching data:', error);
-  } finally {
-    loading = false;
-  }
+
+onMount(() => {
+  // Async logic
+  (async () => {
+    try {
+      await fetchAppointments();
+      await fetchPatientProfiles();
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      loading = false;
+    }
+  })();
+
+  // Synchronous logic and cleanup
+  const checkMobile = () => {
+    isMobile = window.innerWidth < 768;
+  };
+
+  checkMobile();
+  window.addEventListener('resize', checkMobile);
+
+  return () => {
+    window.removeEventListener('resize', checkMobile);
+  };
 });
+
 
 // Open the reason modal
 const openReasonModal = (appointmentId: string) => {
@@ -175,6 +267,8 @@ const fetchAppointments = async () => {
         subServices: data.subServices,
         cancelReason: data.cancelReason,
         remarks: data.remarks || '',
+        assessmentSubmitted: data.assessmentSubmitted || false, // Fetch assessment status
+        assessmentData: data.assessmentData || {}, // Fetch assessment data
     };
   });
 
@@ -211,7 +305,10 @@ const fetchPatientProfiles = async () => {
         id: doc.id,
         name: data.name,
         lastName: data.lastName,
-        age: data.age
+        age: data.age,
+        gender: data.gender,  // Ensure the gender is fetched
+        address: data.address,  // Ensure the address is fetched
+        phone: data.phone  // Ensure the phone number is fetched
       };
     });
   } catch (error) {
@@ -220,6 +317,7 @@ const fetchPatientProfiles = async () => {
     loading = false;
   }
 };
+
 
 // Call fetchPatientProfiles when component is created
 fetchPatientProfiles();
@@ -334,6 +432,31 @@ const openModal = (appointmentId: string) => {
     console.error("Appointment not found with ID:", appointmentId);
   }
 };
+
+// Open dental assessment form
+const openDentalAssessment = (appointmentId: string) => {
+  // Find the selected appointment by its ID
+  selectedAppointment = appointments.find(appointment => appointment.id === appointmentId) ?? null;
+
+  if (selectedAppointment) {
+    const patient = patientProfiles.find(profile => profile.id === selectedAppointment?.patientId);
+    if (patient) {
+      // Pre-fill the dental form with patient data
+      dentalFormData.childName = `${patient.name} ${patient.lastName}`;
+      dentalFormData.gender = patient.gender || '';  // Ensure gender is filled
+      dentalFormData.address = patient.address || '';  // Ensure address is filled
+      dentalFormData.phone = patient.phone || '';  // Ensure phone number is filled
+
+      // Open the dental assessment form
+      isDentalFormOpen = true;
+    } else {
+      console.error("Patient not found for this appointment.");
+    }
+  } else {
+    console.error("Appointment not found with ID:", appointmentId);
+  }
+};
+
 
 // All medicines in the prescription
 
@@ -880,7 +1003,6 @@ function hideAppointmentModal() {
 }
 
 // Function to handle adding a new appointment (without updating the patient profile)
-// Function to handle adding a new appointment (without updating the patient profile)
 async function addNewAppointment() {
   // Ensure that the required fields are valid before proceeding
   if (!newTime || !date || !appointmentService) {
@@ -1312,17 +1434,17 @@ function validateAppointmentData() {
     
         <!-- Display Appointments if any -->
         {#if filterAppointments(currentView).length > 0}
-          {#each filterAppointments(currentView) as appointment}
-            <article class="appointment-card1">
-              <section class="appointment-details">
-                <!-- Patient Info Section -->
-                <p class="appointment-patient">
-                  {#each patientProfiles as profile (profile.id)}
-                    {#if profile.id === appointment.patientId}
-                      <strong>{profile.name} {profile.lastName}</strong> ({profile.age} years old)
-                    {/if}
-                  {/each}
-                </p>
+        {#each filterAppointments(currentView) as appointment}
+        <article class="appointment-card1">
+          <section class="appointment-details">
+            <!-- Patient Info Section -->
+            <p class="appointment-patient">
+              {#each patientProfiles as profile (profile.id)}
+                {#if profile.id === appointment.patientId}
+                  <strong>{profile.name} {profile.lastName}</strong> ({profile.age} years old)
+                {/if}
+              {/each}
+            </p>
     
                 <!-- Date & Time Section -->
                 <div style="margin-bottom: 10px;">
@@ -1371,6 +1493,37 @@ function validateAppointmentData() {
                 >
                   Add Prescription
                 </button>
+                <button
+  class={`px-3 py-1 rounded ${appointment.assessmentSubmitted ? 'bg-green-500 text-white' : 'bg-blue-100 text-blue-500'}`}
+  on:click={() => {
+    if (appointment.assessmentSubmitted) {
+      // Show the submitted assessment data
+      Swal.fire({
+        title: 'Submitted Assessment',
+        html: `
+          <strong>Patient's Name:</strong> ${appointment.assessmentData.childName}<br>
+          <strong>Gender:</strong> ${appointment.assessmentData.gender}<br>
+          <strong>Address:</strong> ${appointment.assessmentData.address}<br>
+          <strong>Phone:</strong> ${appointment.assessmentData.phone}<br>
+          <strong>Dental Needs:</strong> ${Object.entries(appointment.assessmentData.dentalNeeds).filter(([key, value]) => value).map(([key]) => key).join(', ')}<br>
+          <strong>Treatment Required:</strong> ${Object.entries(appointment.assessmentData.treatmentRequired).filter(([key, value]) => value).map(([key]) => key).join(', ')}<br>
+          <strong>Missing Teeth:</strong> ${appointment.assessmentData.missingTooth}<br>
+          <strong>Decayed Teeth:</strong> ${appointment.assessmentData.decayedTooth}<br>
+          <strong>Filled Teeth:</strong> ${appointment.assessmentData.filledTooth}<br>
+        `,
+        icon: 'info',
+      });
+    } else {
+      openDentalAssessment(appointment.id);
+    }
+  }}
+>
+  {#if appointment.assessmentSubmitted}
+    Assessed
+  {:else}
+    Assessment
+  {/if}
+</button>
                 <button
                   class="bg-blue-100"
                   on:click={() => handleCompletedAppointment(appointment.id, 'Completed', appointment.remarks || '')}
@@ -1569,7 +1722,269 @@ function validateAppointmentData() {
   </div>
 {/if}
 
+<!-- Dental Assessment Modal/Drawer -->
+{#if isDentalFormOpen}
+  {#if !isMobile}
+    <!-- Modal for desktop -->
+    <div
+    class="modal-overlay"
+    role="button"
+    tabindex="0"
+    aria-label="Close dental form"
+    on:click={closeDentalForm}
+    on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && closeDentalForm()}
+  >
+        <div class="modal" on:click|stopPropagation>
+        <div class="modal-header">
+          <h2>MARION COUNTY SCHOOLS DENTAL FORM</h2>
+          <button class="close-btn" on:click={closeDentalForm}>&times;</button>
+        </div>
+        <div class="modal-body">
+          <form on:submit|preventDefault={handleDentalFormSubmit}>
+            <div class="form-grid">
+              <!-- Row 1 -->
+              <div class="form-group">
+                <label for="childName">Patient's Name:</label>
+                <input type="text" id="childName" bind:value={dentalFormData.childName} />
+              </div>
+              
+              <div class="form-group">
+                <label for="gender">Gender:</label>
+                <select id="gender" bind:value={dentalFormData.gender}>
+                  <option value="">Select</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              
+              <!-- Row 2 -->
+              <div class="form-group address">
+                <label for="address">Address:</label>
+                <input type="text" id="address" bind:value={dentalFormData.address} />
+              </div>
+              <div class="form-group">
+                <label for="phone">Phone:</label>
+                <input type="tel" id="phone" bind:value={dentalFormData.phone} />
+              </div>
+              
+              <!-- Row 3 -->
+              <div class="form-group dental-needs">
+                <label>Dental Needs:</label>
+                <div class="checkbox-group">
+                  <div class="checkbox-item">
+                    <input type="checkbox" id="cleaning" bind:checked={dentalFormData.dentalNeeds.cleaning} />
+                    <label for="cleaning">Cleaning</label>
+                  </div>
+                  <div class="checkbox-item">
+                    <input type="checkbox" id="exam" bind:checked={dentalFormData.dentalNeeds.exam} />
+                    <label for="exam">Exam</label>
+                  </div>
+                  <div class="checkbox-item">
+                    <input type="checkbox" id="fluoride" bind:checked={dentalFormData.dentalNeeds.fluorideTreatment} />
+                    <label for="fluoride">Fluoride Treatment Received</label>
+                  </div>
+                  <div class="checkbox-item">
+                    <input type="checkbox" id="sealant" bind:checked={dentalFormData.dentalNeeds.sealantAdministration} />
+                    <label for="sealant">Sealant Administration</label>
+                  </div>
+                  <div class="checkbox-item">
+                    <input type="checkbox" id="noProblems" bind:checked={dentalFormData.dentalNeeds.noProblemsNoted} />
+                    <label for="noProblems">No Problems Noted</label>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="form-group treatment-required">
+                <label>Treatment Required:</label>
+                <div class="checkbox-group">
+                  <div class="checkbox-item">
+                    <input type="checkbox" id="restoration" bind:checked={dentalFormData.treatmentRequired.restoration} />
+                    <label for="restoration">Restoration</label>
+                  </div>
+                  <div class="checkbox-item">
+                    <input type="checkbox" id="pulpTherapy" bind:checked={dentalFormData.treatmentRequired.pulpTherapy} />
+                    <label for="pulpTherapy">Pulp Therapy</label>
+                  </div>
+                  <div class="checkbox-item">
+                    <input type="checkbox" id="extraction" bind:checked={dentalFormData.treatmentRequired.extraction} />
+                    <label for="extraction">Extraction</label>
+                  </div>
+                  <div class="checkbox-item">
+                    <input type="checkbox" id="other" bind:checked={dentalFormData.treatmentRequired.other} />
+                    <label for="other">Other</label>
+                    <input 
+                      type="text" 
+                      id="otherDetails" 
+                      bind:value={dentalFormData.treatmentRequired.otherDetails} 
+                      class="other-input" 
+                      disabled={!dentalFormData.treatmentRequired.other}
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Row 4 -->
+              <!-- Oral conditions prior to today's visit -->
+<div class="form-group oral-conditions full-width">
+  <label>Oral conditions prior to today's visit: (Please indicate number of each condition)</label>
+  <div class="legend">
+    <label for="missingTooth">Missing Tooth: </label>
+    <input type="number" id="missingTooth" bind:value={dentalFormData.missingTooth} min="0" />
+    <label></label>
+  </div>
+  <div class="legend">
+    <label for="decayedTooth">Decayed Tooth: </label>
+    <input type="number" id="decayedTooth" bind:value={dentalFormData.decayedTooth} min="0" />
+    <label></label>
+  </div>
+  <div class="legend">
+    <label for="filledTooth">Filled Tooth: </label>
+    <input type="number" id="filledTooth" bind:value={dentalFormData.filledTooth} min="0" />
+    <label></label>
+  </div>
+</div>
 
+            </div>
+            
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary">Submit</button>
+              <button type="button" class="btn btn-secondary" on:click={closeDentalForm}>Cancel</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  {:else}
+    <!-- Drawer for mobile -->
+    <div class="drawer-overlay">
+      <div class="drawer">
+        <div class="drawer-header">
+          <h2>MARION COUNTY SCHOOLS DENTAL FORM</h2>
+          <button class="close-btn" on:click={closeDentalForm}>&times;</button>
+        </div>
+        <div class="drawer-body">
+          <form on:submit|preventDefault={handleDentalFormSubmit}>
+            <div class="form-stack">
+              <!-- Child's Name -->
+              <div class="form-group">
+                <label for="mobileChildName">Patient's Name:</label>
+                <input type="text" id="mobileChildName" bind:value={dentalFormData.childName} />
+              </div>
+              
+              <!-- Gender -->
+              <div class="form-group">
+                <label for="mobileGender">Gender:</label>
+                <select id="mobileGender" bind:value={dentalFormData.gender}>
+                  <option value="">Select</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              
+              <!-- Address -->
+              <div class="form-group">
+                <label for="mobileAddress">Address:</label>
+                <input type="text" id="mobileAddress" bind:value={dentalFormData.address} />
+              </div>
+              
+              <!-- Phone -->
+              <div class="form-group">
+                <label for="mobilePhone">Phone:</label>
+                <input type="tel" id="mobilePhone" bind:value={dentalFormData.phone} />
+              </div>
+              
+              <!-- Dental Needs -->
+              <div class="form-group">
+                <label>Dental Needs:</label>
+                <div class="checkbox-group">
+                  <div class="checkbox-item">
+                    <input type="checkbox" id="mobileCleaning" bind:checked={dentalFormData.dentalNeeds.cleaning} />
+                    <label for="mobileCleaning">Cleaning</label>
+                  </div>
+                  <div class="checkbox-item">
+                    <input type="checkbox" id="mobileExam" bind:checked={dentalFormData.dentalNeeds.exam} />
+                    <label for="mobileExam">Exam</label>
+                  </div>
+                  <div class="checkbox-item">
+                    <input type="checkbox" id="mobileFluoride" bind:checked={dentalFormData.dentalNeeds.fluorideTreatment} />
+                    <label for="mobileFluoride">Fluoride Treatment Received</label>
+                  </div>
+                  <div class="checkbox-item">
+                    <input type="checkbox" id="mobileSealant" bind:checked={dentalFormData.dentalNeeds.sealantAdministration} />
+                    <label for="mobileSealant">Sealant Administration</label>
+                  </div>
+                  <div class="checkbox-item">
+                    <input type="checkbox" id="mobileNoProblems" bind:checked={dentalFormData.dentalNeeds.noProblemsNoted} />
+                    <label for="mobileNoProblems">No Problems Noted</label>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Treatment Required -->
+              <div class="form-group">
+                <label>Treatment Required:</label>
+                <div class="checkbox-group">
+                  <div class="checkbox-item">
+                    <input type="checkbox" id="mobileRestoration" bind:checked={dentalFormData.treatmentRequired.restoration} />
+                    <label for="mobileRestoration">Restoration</label>
+                  </div>
+                  <div class="checkbox-item">
+                    <input type="checkbox" id="mobilePulpTherapy" bind:checked={dentalFormData.treatmentRequired.pulpTherapy} />
+                    <label for="mobilePulpTherapy">Pulp Therapy</label>
+                  </div>
+                  <div class="checkbox-item">
+                    <input type="checkbox" id="mobileExtraction" bind:checked={dentalFormData.treatmentRequired.extraction} />
+                    <label for="mobileExtraction">Extraction</label>
+                  </div>
+                  <div class="checkbox-item">
+                    <input type="checkbox" id="mobileOther" bind:checked={dentalFormData.treatmentRequired.other} />
+                    <label for="mobileOther">Other</label>
+                    <input 
+                      type="text" 
+                      id="mobileOtherDetails" 
+                      bind:value={dentalFormData.treatmentRequired.otherDetails} 
+                      class="other-input" 
+                      disabled={!dentalFormData.treatmentRequired.other}
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Oral Conditions -->
+              <!-- Oral conditions prior to today's visit -->
+<div class="form-group">
+  <label>Oral conditions prior to today's visit:</label>
+  <div class="legend">
+    <label for="mobileMissingTooth">Missing Tooth: </label>
+    <input type="number" id="mobileMissingTooth" bind:value={dentalFormData.missingTooth} min="0" />
+    <label></label>
+  </div>
+  <div class="legend">
+    <label for="mobileDecayedTooth">Decayed Tooth: </label>
+    <input type="number" id="mobileDecayedTooth" bind:value={dentalFormData.decayedTooth} min="0" />
+    <label></label>
+  </div>
+  <div class="legend">
+    <label for="mobileFilledTooth">Filled Tooth: </label>
+    <input type="number" id="mobileFilledTooth" bind:value={dentalFormData.filledTooth} min="0" />
+    <label></label>
+  </div>
+</div>
+
+            </div>
+            
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary">Submit</button>
+              <button type="button" class="btn btn-secondary" on:click={closeDentalForm}>Cancel</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  {/if}
+{/if}
 
 <style>
 /* Icon Buttons Styling */
@@ -2091,5 +2506,203 @@ function validateAppointmentData() {
   }
 }
 
+/* Dental Assessment Form Styles */
+.modal {
+  background-color: white;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 800px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
 
+.modal-header {
+  padding: 15px 20px;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #f8f8f8;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #333;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #666;
+}
+
+.close-btn:hover {
+  color: #000;
+}
+
+.modal-body {
+  padding: 20px;
+}
+
+/* Drawer styles for mobile */
+.drawer-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+}
+
+.drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  max-width: 100%;
+  background-color: white;
+  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.2);
+  z-index: 1001;
+  overflow-y: auto;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.drawer-header {
+  padding: 15px 20px;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #f8f8f8;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.drawer-header h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #333;
+}
+
+.drawer-body {
+  padding: 20px;
+}
+
+/* Form styles */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 15px;
+}
+
+.form-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.address {
+  grid-column: span 2;
+}
+
+.dental-needs, .treatment-required {
+  grid-column: span 1;
+}
+
+.full-width {
+  grid-column: 1 / -1;
+}
+
+label {
+  font-weight: 500;
+  color: #333;
+}
+
+input, select {
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+input:focus, select:focus {
+  outline: none;
+  border-color: #08B8F3;
+  box-shadow: 0 0 0 2px rgba(8, 184, 243, 0.2);
+}
+
+.checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.checkbox-item label {
+  font-weight: normal;
+}
+
+.other-input {
+  flex: 1;
+  margin-left: 5px;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin-top: 10px;
+  font-size: 0.9rem;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.btn {
+  padding: 10px 15px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s, transform 0.1s;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+}
+
+.btn:active {
+  transform: translate;
+}
 </style>
