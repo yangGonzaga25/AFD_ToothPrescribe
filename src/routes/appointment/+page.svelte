@@ -42,7 +42,93 @@
   filledTooth: 0,
   
   };
+
+  interface Treatment {
+    id: string;
+    toothNumber: number;
+    date: Date;
+    month: string;
+    day: string;
+    condition: string;
+    treatment: string;
+    dentist: string;
+    status: string;
+    notes: string;
+    reason: string;
+  }
+  let serviceType = "Medical";
+  let selectedTooth = 22; // Default selected tooth
+  let treatments: Treatment[] = [];
+  const upperTeeth = [18, 17, 16, 15, 14, 13, 12, 11, 21, 22, 23, 24, 25, 26, 27, 28];
+const lowerTeeth = [48, 47, 46, 45, 44, 43, 42, 41, 31, 32, 33, 34, 35, 36, 37, 38];
+
+const toothNames = {
+    11: "Maxillary Right Central Incisor",
+    12: "Maxillary Right Lateral Incisor",
+    13: "Maxillary Right Canine",
+    14: "Maxillary Right First Premolar",
+    15: "Maxillary Right Second Premolar",
+    16: "Maxillary Right First Molar",
+    17: "Maxillary Right Second Molar",
+    18: "Maxillary Right Third Molar",
+    21: "Maxillary Left Central Incisor",
+    22: "Maxillary Left Lateral Incisor",
+    23: "Maxillary Left Canine",
+    24: "Maxillary Left First Premolar",
+    25: "Maxillary Left Second Premolar",
+    26: "Maxillary Left First Molar",
+    27: "Maxillary Left Second Molar",
+    28: "Maxillary Left Third Molar",
+    31: "Mandibular Left Central Incisor",
+    32: "Mandibular Left Lateral Incisor",
+    33: "Mandibular Left Canine",
+    34: "Mandibular Left First Premolar",
+    35: "Mandibular Left Second Premolar",
+    36: "Mandibular Left First Molar",
+    37: "Mandibular Left Second Molar",
+    38: "Mandibular Left Third Molar",
+    41: "Mandibular Right Central Incisor",
+    42: "Mandibular Right Lateral Incisor",
+    43: "Mandibular Right Canine",
+    44: "Mandibular Right First Premolar",
+    45: "Mandibular Right Second Premolar",
+    46: "Mandibular Right First Molar",
+    47: "Mandibular Right Second Molar",
+    48: "Mandibular Right Third Molar"
+  };
   
+  function selectTooth(toothNumber: number) {
+  selectedTooth = toothNumber;
+  treatments = [
+    {
+      id: "1",
+      toothNumber: selectedTooth,
+      date: new Date(2023, 2, 3),
+      month: "MEI",
+      day: "03",
+      condition: "Caries",
+      treatment: "Tooth filling",
+      dentist: "Drg Soap Mactavish",
+      status: "done",
+      notes: "Advanced Decay",
+      reason: ""
+    },
+    {
+      id: "2",
+      toothNumber: selectedTooth,
+      date: new Date(2023, 3, 12),
+      month: "APR",
+      day: "12",
+      condition: "Caries",
+      treatment: "Tooth filling",
+      dentist: "Drg Soap Mactavish",
+      status: "pending",
+      notes: "Decay in pulp",
+      reason: "Not enough time"
+    }
+  ];
+}
+
   // Function to toggle dental assessment modal/drawer
   function toggleDentalForm() {
     isDentalFormOpen = !isDentalFormOpen;
@@ -1736,7 +1822,7 @@ function validateAppointmentData() {
   >
         <div class="modal" on:click|stopPropagation>
         <div class="modal-header">
-          <h2>MARION COUNTY SCHOOLS DENTAL FORM</h2>
+          <h2>DENTAL ASSESSMENT FORM</h2>
           <button class="close-btn" on:click={closeDentalForm}>&times;</button>
         </div>
         <div class="modal-body">
@@ -1844,6 +1930,60 @@ function validateAppointmentData() {
     <label></label>
   </div>
 </div>
+<div class="max-w-6xl mx-auto p-4 bg-white">
+  <!-- Service Type Selection -->
+  
+  <!-- Main Content -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 border border-gray-200 rounded-lg">
+    <!-- Odontogram -->
+    <div class="p-6 border-r border-gray-200">
+      <h2 class="text-lg font-medium text-gray-700 mb-6">Odontogram</h2>
+      <div class="relative">
+        <!-- Upper teeth -->
+        <div class="flex justify-center mb-4">
+          <div class="grid grid-cols-8 gap-1 w-full">
+            {#each upperTeeth as tooth}
+              <div class="flex flex-col items-center">
+                <div class="text-xs text-gray-500 mb-1">{tooth}</div>
+                <div
+                  class="w-10 h-12 border border-gray-300 rounded-t-full cursor-pointer hover:border-blue-500 transition-colors
+                    {selectedTooth === tooth ? 'ring-2 ring-blue-500' : ''}"
+                  on:click={() => selectTooth(tooth)}
+                  on:keydown={(event) => event.key === 'Enter' || event.key === ' ' ? selectTooth(tooth) : null}
+                  tabindex="0"
+                  role="button"
+                  aria-label={`Select tooth ${tooth}`}
+                ></div>
+              </div>
+            {/each}
+          </div>
+        </div>
+
+        <!-- Divider -->
+        <div class="border-t border-gray-300 my-4"></div>
+
+        <!-- Lower teeth -->
+        <div class="flex justify-center">
+    <div class="grid grid-cols-8 gap-1 w-full">
+      {#each lowerTeeth as tooth}
+        <div class="flex flex-col items-center">
+          <button
+            class="w-10 h-12 border border-gray-300 rounded-t-full cursor-pointer hover:border-blue-500 transition-colors
+              {selectedTooth === tooth ? 'ring-2 ring-blue-500' : ''}"
+            on:click={() => selectTooth(tooth)}
+            aria-pressed={selectedTooth === tooth ? 'true' : 'false'}
+            aria-label={`Select tooth ${tooth}`}
+          ></button>
+          <div class="text-xs text-gray-500 mt-1">{tooth}</div>
+        </div>
+      {/each}
+    </div>
+  </div>
+</div>
+</div>
+    </div>
+  </div>
+
 
             </div>
             
@@ -1860,7 +2000,7 @@ function validateAppointmentData() {
     <div class="drawer-overlay">
       <div class="drawer">
         <div class="drawer-header">
-          <h2>MARION COUNTY SCHOOLS DENTAL FORM</h2>
+          <h2>DENTAL ASSESSMENT FORM</h2>
           <button class="close-btn" on:click={closeDentalForm}>&times;</button>
         </div>
         <div class="drawer-body">
@@ -1972,6 +2112,60 @@ function validateAppointmentData() {
     <label></label>
   </div>
 </div>
+<div class="max-w-6xl mx-auto p-4 bg-white">
+  <!-- Service Type Selection -->
+  
+  <!-- Main Content -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 border border-gray-200 rounded-lg">
+    <!-- Odontogram -->
+    <div class="p-6 border-r border-gray-200">
+      <h2 class="text-lg font-medium text-gray-700 mb-6">Odontogram</h2>
+      <div class="relative">
+        <!-- Upper teeth -->
+        <div class="flex justify-center mb-4">
+          <div class="grid grid-cols-8 gap-1 w-full">
+            {#each upperTeeth as tooth}
+              <div class="flex flex-col items-center">
+                <div class="text-xs text-gray-500 mb-1">{tooth}</div>
+                <div
+                  class="w-10 h-12 border border-gray-300 rounded-t-full cursor-pointer hover:border-blue-500 transition-colors
+                    {selectedTooth === tooth ? 'ring-2 ring-blue-500' : ''}"
+                  on:click={() => selectTooth(tooth)}
+                  on:keydown={(event) => event.key === 'Enter' || event.key === ' ' ? selectTooth(tooth) : null}
+                  tabindex="0"
+                  role="button"
+                  aria-label={`Select tooth ${tooth}`}
+                ></div>
+              </div>
+            {/each}
+          </div>
+        </div>
+
+        <!-- Divider -->
+        <div class="border-t border-gray-300 my-4"></div>
+
+        <!-- Lower teeth -->
+        <div class="flex justify-center">
+    <div class="grid grid-cols-8 gap-1 w-full">
+      {#each lowerTeeth as tooth}
+        <div class="flex flex-col items-center">
+          <button
+            class="w-10 h-12 border border-gray-300 rounded-t-full cursor-pointer hover:border-blue-500 transition-colors
+              {selectedTooth === tooth ? 'ring-2 ring-blue-500' : ''}"
+            on:click={() => selectTooth(tooth)}
+            aria-pressed={selectedTooth === tooth ? 'true' : 'false'}
+            aria-label={`Select tooth ${tooth}`}
+          ></button>
+          <div class="text-xs text-gray-500 mt-1">{tooth}</div>
+        </div>
+      {/each}
+    </div>
+  </div>
+</div>
+</div>
+    </div>
+  </div>
+
 
             </div>
             
